@@ -23,6 +23,7 @@ Every artifact lives in your repository, version-controlled, diffable, and trans
 - [Project Structure](#project-structure)
 - [Configuration](#configuration)
 - [Living Insights](#living-insights)
+- [Headless Agent Emulation](#headless-agent-emulation)
 - [Greenfield vs. Brownfield](#greenfield-vs-brownfield)
 - [Using with AI Assistants](#using-with-ai-assistants)
 - [VS Code Chat Features](#vs-code-chat-features)
@@ -596,6 +597,83 @@ The `.jumpstart/config.yaml` file controls framework behavior across 28 configur
 | `vscode_tools` | VS Code Chat tool preferences |
 
 The file is self-documenting with inline comments. See `.jumpstart/config.yaml` for full documentation.
+
+---
+
+## Headless Agent Emulation
+
+Jump Start includes a **headless runner** that executes agents programmatically without a human in the loop. This enables automated testing, CI pipelines, and reproducible agent runs.
+
+### Prerequisites
+
+The headless runner uses [LiteLLM](https://docs.litellm.ai) as a unified gateway to 100+ LLM providers via an OpenAI-compatible API. Install and start the proxy:
+
+```bash
+pip install litellm
+litellm --model gpt-4o            # starts on http://localhost:4000
+```
+
+### Environment Setup
+
+Copy the example environment file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LITELLM_BASE_URL` | URL of your LiteLLM proxy server | `http://localhost:4000` |
+| `LITELLM_API_KEY` | API key for the LiteLLM proxy (when key-based auth is enabled) | — |
+| `OPENAI_API_KEY` | Fallback API key (used if `LITELLM_API_KEY` is not set) | — |
+| `DEBUG` | Enable verbose error stack traces in the headless runner | — |
+
+The headless runner loads `.env` automatically via [dotenv](https://www.npmjs.com/package/dotenv).
+
+### Running Emulations
+
+Use the built-in npm scripts:
+
+```bash
+# Mock mode — no LLM calls, uses canned responses
+npm run emulate:mock
+
+# Live mode — single agent (Architect) against the LiteLLM proxy
+npm run emulate:architect
+
+# Full pipeline — all phases in sequence
+npm run emulate:full
+
+# Custom run
+node bin/headless-runner.js --agent challenger --persona compliant-user
+```
+
+### Supported Models
+
+The LLM provider ships with a registry of 14 models across three providers. LiteLLM routes each model to the correct upstream API automatically:
+
+| Provider | Models |
+|----------|--------|
+| OpenAI | `gpt-5.2`, `gpt-5-mini`, `gpt-4o`, `gpt-4o-mini`, `o3`, `o3-mini`, `o4-mini` |
+| Anthropic | `claude-opus-4-5`, `claude-sonnet-4`, `claude-haiku-3.5` |
+| Google Gemini | `gemini-3-flash-preview`, `gemini-2.5-flash`, `gemini-2.5-pro` |
+
+### Mock vs Live Mode
+
+- **Mock mode** (`--mock`): Returns synthetic responses without making network calls. Ideal for testing and CI.
+- **Live mode** (default): Routes requests through the LiteLLM proxy to real LLM providers. Requires a running LiteLLM instance and valid API keys.
+
+### Personas
+
+The headless runner supports **personas** that control how the simulated user responds to agent questions:
+
+| Persona | Behavior |
+|---------|----------|
+| `compliant-user` | Accepts defaults, approves quickly |
+| `enterprise-user` | Prefers Java/Spring/Oracle/Angular stack |
+| `strict-user` | Demands rigorous ceremony and detail |
+
+Custom personas can be added in `tests/e2e/personas/`. See [Persona README](tests/e2e/personas/README.md) for the format.
 
 ---
 

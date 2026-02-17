@@ -132,7 +132,7 @@ function flatten(obj, prefix = '') {
  * @param {string} [input.global_path] - Path to global config.
  * @returns {object} Merged configuration.
  */
-function loadConfig(input) {
+async function loadConfig(input) {
   const { root = '.', global_path } = input;
   const resolvedRoot = path.resolve(root);
 
@@ -170,7 +170,30 @@ function loadConfig(input) {
   }
 
   // Merge: project wins over global
-  const merged = deepMerge(globalConfig, projectConfig);
+  let merged = deepMerge(globalConfig, projectConfig);
+
+  // ─── Ceremony Profile Expansion (UX Feature 3) ─────────────────────────
+  // If a ceremony profile is set, expand it as a base layer.
+  // Merge order: ceremony profile (lowest) → global → project (highest)
+  let profileApplied = null;
+  const ceremonyProfile = merged.ceremony?.profile;
+  if (ceremonyProfile && ceremonyProfile !== 'standard') {
+    try {
+      // Dynamic import to avoid circular dependency
+      const { applyProfile } = await import('./ceremony.js');
+      const profileResult = applyProfile(merged, ceremonyProfile);
+      merged = profileResult.config;
+      profileApplied = {
+        profile: ceremonyProfile,
+        settings_applied: profileResult.applied.length,
+        settings_skipped: profileResult.skipped.length,
+        applied: profileResult.applied,
+        skipped: profileResult.skipped
+      };
+    } catch {
+      // ceremony.js not available — skip profile expansion
+    }
+  }
 
   // Track what the global config overrides
   const globalFlat = flatten(globalConfig);
@@ -187,6 +210,7 @@ function loadConfig(input) {
     config: merged,
     sources,
     overrides_applied: overridesApplied,
+    profile_applied: profileApplied,
     global_keys: Object.keys(globalFlat).length,
     project_keys: Object.keys(projectFlat).length
   };
@@ -201,10 +225,10 @@ if (process.argv[1] && (
   let input = '';
   process.stdin.setEncoding('utf8');
   process.stdin.on('data', chunk => { input += chunk; });
-  process.stdin.on('end', () => {
+  process.stdin.on('end', async () => {
     try {
       const parsed = input.trim() ? JSON.parse(input) : {};
-      const result = loadConfig(parsed);
+      const result = await loadConfig(parsed);
       process.stdout.write(JSON.stringify(result, null, 2) + '\n');
     } catch (err) {
       process.stdout.write(JSON.stringify({ error: err.message }) + '\n');
@@ -213,8 +237,9 @@ if (process.argv[1] && (
   });
 
   if (process.stdin.isTTY) {
-    const result = loadConfig({});
-    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    loadConfig({}).then(result => {
+      process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    });
   }
 }
 

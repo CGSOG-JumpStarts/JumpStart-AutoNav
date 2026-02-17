@@ -50,9 +50,9 @@ describe('LLM Provider', () => {
       const models = listModels();
       expect(models).toBeInstanceOf(Array);
       expect(models.length).toBeGreaterThan(0);
-      expect(models).toContain('openai/gpt-4o');
+      expect(models).toContain('openai/gpt-5.2');
       expect(models).toContain('anthropic/claude-opus-4-5');
-      expect(models).toContain('gemini/gemini-2.5-flash');
+      expect(models).toContain('gemini/gemini-3-flash-preview');
     });
     
     it('gets model configuration', () => {

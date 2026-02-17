@@ -344,6 +344,25 @@ phase_assignments:
 
 ---
 
+#### Environment Variables (Headless Runner)
+
+The headless runner uses [LiteLLM](https://docs.litellm.ai) as a unified LLM gateway. Configure it via environment variables in a `.env` file at the project root:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LITELLM_BASE_URL` | URL of your LiteLLM proxy server | `http://localhost:4000` |
+| `LITELLM_API_KEY` | API key for the LiteLLM proxy | — |
+| `OPENAI_API_KEY` | Fallback API key (used when `LITELLM_API_KEY` is not set) | — |
+| `DEBUG` | Enable verbose error stack traces | — |
+
+The `.env` file is loaded automatically via `dotenv` when the headless runner starts. See the [Headless Agent Emulation](../README.md#headless-agent-emulation) section in the README for full usage instructions.
+
+---
+
 #### Conflict Detection
 
 **`locks.enabled`** — `true` | `false`

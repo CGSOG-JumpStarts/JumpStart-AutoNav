@@ -49,8 +49,8 @@ const REPORTS_DIR = path.join(ROOT_DIR, 'tests', 'e2e', 'reports');
 const AGENT_PHASES = ['scout', 'challenger', 'analyst', 'pm', 'architect', 'developer'];
 
 const DEFAULT_CONFIG = {
-  agentModel: 'openai/gpt-4o',
-  proxyModel: 'gemini/gemini-2.5-flash',
+  agentModel: 'openai/gpt-5.2',
+  proxyModel: 'gemini/gemini-3-flash-preview',
   persona: 'compliant-user',
   maxTurns: 50,
   reasoningEffort: 'medium'

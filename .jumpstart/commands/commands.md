@@ -1305,6 +1305,46 @@ jumpstart coverage <prd-path> <plan-path>
 
 ---
 
+## /jumpstart.resume
+
+**Phase:** Any
+**Agent:** System (no persona)
+**Added by:** Item 101
+**Template:** `.jumpstart/templates/session-briefing.md`
+
+**Description:** Present a concise session resumption briefing showing where you left off, what's next, key insights, open questions, and how to get started. Designed for starting a new session after an interruption. Also auto-triggered on agent activation when `session_briefing.auto_trigger` is `true` in config.
+
+**Usage:**
+```
+/jumpstart.resume
+```
+
+**Pre-conditions:**
+- Project must be initialized (`.jumpstart/config.yaml` exists).
+- `session_briefing.enabled` must be `true` in config (default).
+
+**Behavior:**
+1. Read `.jumpstart/config.yaml` for `session_briefing` settings.
+2. Read `.jumpstart/state/state.json` for `resume_context`, `current_phase`, `current_agent`, `phase_history`, `approved_artifacts`.
+3. Read `.jumpstart/state/todos.json` for `active_phase`, `todos[]`, `completed[]`.
+4. Scan `specs/insights/*.md` for the most recent insight entries (by timestamp), up to `session_briefing.max_insights`.
+5. Scan `specs/*.md` for `[NEEDS CLARIFICATION]` tags.
+6. Check `specs/qa-log.md` for unanswered questions.
+7. Determine the next recommended action:
+   - If `resume_context.next_action` is populated, use it.
+   - Otherwise, derive from `current_phase` using the phase transition map in `bin/lib/handoff.js`.
+   - If no phase has started, recommend `/jumpstart.challenge`.
+8. Render the briefing using `.jumpstart/templates/session-briefing.md` format.
+9. The briefing includes: TLDR, Where You Left Off, What's Next, Key Insights, Open Questions, and Get Started.
+
+**Output:**
+Ephemeral — displayed to the user but not written to a file. No artifact is created.
+
+**Auto-Trigger:**
+When `session_briefing.auto_trigger` is `true`, every phase agent (Scout, Challenger, Analyst, PM, Architect, Developer) presents this briefing before starting its protocol, provided `resume_context` in state.json contains prior work data. If `resume_context` is empty/null (fresh project), the briefing is skipped.
+
+---
+
 ## /jumpstart.deploy
 
 **Phase:** Any (Post Phase 3+)
@@ -1329,3 +1369,154 @@ jumpstart coverage <prd-path> <plan-path>
 4. Create deployment plan with rollback procedures and monitoring.
 5. Output `specs/deploy.md` and `specs/insights/deploy-insights.md`.
 6. Present to human for review (advisory, non-gating).
+
+---
+
+## /jumpstart.next
+
+**Phase:** Any
+**Agent:** System (no persona)
+**Added by:** UX Feature 1
+
+**Description:** Auto-pilot phase progression. Reads workflow state, checks artifact approval status, and recommends the next action. Eliminates manual slash command memorization by providing intelligent "what's next" guidance with the exact command to run.
+
+**Usage:**
+```
+/jumpstart.next
+```
+
+**Pre-conditions:**
+- Project must be initialized (`.jumpstart/config.yaml` exists), OR the command will recommend initialization.
+
+**Behavior:**
+1. Read `.jumpstart/state/state.json` for `current_phase`, `approved_artifacts`.
+2. Read `.jumpstart/config.yaml` for `project.type` (greenfield vs brownfield) and `workflow.require_gate_approval`.
+3. Determine the current state:
+   - **Fresh project (no phase started):**
+     - Brownfield without Scout artifact → recommend `/jumpstart.scout`
+     - Brownfield with unapproved Scout artifact → recommend approval
+     - Greenfield → recommend `/jumpstart.challenge`
+   - **Mid-workflow (phase in progress):**
+     - Current artifact missing → recommend continuing current phase
+     - Current artifact exists but unapproved → recommend `/jumpstart.review`
+     - Current artifact approved → use `PHASE_MAP` from `bin/lib/handoff.js` to determine next phase → recommend the activation command
+   - **Final phase (Phase 4):**
+     - Recommend `/jumpstart.status` or `/jumpstart.deploy`
+4. Return: action type, current phase, next phase, next agent, activation command, human-readable message, and context files needed.
+5. Does NOT auto-activate the next agent — preserves human-in-the-loop per Article X.
+
+**CLI equivalent:**
+```bash
+jumpstart-mode next
+```
+
+**Output:**
+Ephemeral — displayed conversationally. The AI presents the recommendation and the user decides whether to proceed.
+
+---
+
+## /jumpstart.ceremony
+
+**Phase:** Any
+**Agent:** System (no persona)
+**Added by:** UX Feature 3
+
+**Description:** View or change the ceremony profile that controls the framework's overall rigor level. Profiles expand into concrete config overrides as a base layer — explicit user settings always take precedence.
+
+**Usage:**
+```
+/jumpstart.ceremony
+/jumpstart.ceremony light
+/jumpstart.ceremony standard
+/jumpstart.ceremony rigorous
+```
+
+**Pre-conditions:**
+- Project must be initialized (`.jumpstart/config.yaml` exists).
+
+**Profile Definitions:**
+
+| Profile | Description | Use Case |
+|---------|-------------|----------|
+| `light` | Quick elicitation, fewer gates, relaxed quality thresholds | Prototypes, small features, rapid iteration |
+| `standard` | Balanced workflow with all core gates (default) | Most projects |
+| `rigorous` | Deep elicitation, mandatory adversarial + security review, strict TDD | Enterprise, regulated, high-risk projects |
+
+**Key Settings by Profile:**
+
+| Setting | Light | Standard | Rigorous |
+|---------|-------|----------|----------|
+| Elicitation depth | quick | standard | deep |
+| NFRs required | no | yes | yes |
+| ADRs required | no | yes | yes |
+| API contracts | no | yes | yes |
+| Adversarial review | no | no | yes |
+| Peer review | no | no | yes |
+| TDD mandate | no | no | yes |
+| Quality score minimum | 50 | 70 | 85 |
+| Metric coverage minimum | 60% | 80% | 95% |
+
+**Behavior:**
+1. If no argument: display the current profile and a summary of all profiles.
+2. If a profile name is given: update `ceremony.profile` in `.jumpstart/config.yaml`.
+3. Display which settings will change and their new values.
+4. Profile values are defaults — any explicit overrides in config.yaml still take precedence.
+
+**CLI equivalent:**
+```bash
+jumpstart-mode ceremony              # Show current profile
+jumpstart-mode ceremony set light    # Set to light profile
+jumpstart-mode ceremony compare light rigorous  # Compare two profiles
+```
+
+---
+
+## /jumpstart.summarize
+
+**Phase:** Any (most useful before Phases 2–4)
+**Agent:** System (no persona)
+**Added by:** UX Feature 9
+
+**Description:** Generate a compressed context packet for a target phase, containing only the upstream information that phase agent needs. Reduces token usage by extracting structured data (user stories, NFRs, tech stack, components, tasks) and summarizing prose sections, while preserving acceptance criteria, `[NEEDS CLARIFICATION]` tags, and NFR metrics verbatim.
+
+**Usage:**
+```
+/jumpstart.summarize
+/jumpstart.summarize 4
+/jumpstart.summarize 3
+```
+
+**Pre-conditions:**
+- At least one upstream artifact must exist in `specs/`.
+
+**Behavior:**
+1. Determine the target phase (from argument, or auto-detect from `.jumpstart/state/state.json`).
+2. Look up the context files the target phase needs (from `PHASE_CONTEXT` map).
+3. For each file:
+   - Extract YAML frontmatter metadata.
+   - Parse section headings and content.
+   - Extract structured data: user stories (E##-S##), NFRs (NFR-##), tech stack tables, component definitions, tasks (M##-T##).
+   - Preserve verbatim: acceptance criteria, `[NEEDS CLARIFICATION]` tags, NFR metric values.
+   - Summarize prose sections (first paragraph + bullet points, truncated to ~500 chars).
+4. Aggregate all structured data into a single context packet.
+5. Present as a formatted summary with:
+   - Requirements overview table (stories + acceptance criteria)
+   - NFR table with metrics
+   - Tech stack table
+   - Architecture components list
+   - Implementation tasks by milestone
+   - Open items (all `[NEEDS CLARIFICATION]` tags)
+   - Full artifact links for drill-down
+6. Report compression ratio (typically 40–70% reduction in characters).
+
+**CLI equivalent:**
+```bash
+jumpstart-mode summarize 4             # JSON output for Phase 4
+jumpstart-mode summarize 4 --markdown  # Markdown output for Phase 4
+```
+
+**Output:**
+Ephemeral by default — displayed to the user. Can be saved to a file if needed:
+```bash
+jumpstart-mode summarize 4 --markdown > .jumpstart/context-packet-phase4.md
+```

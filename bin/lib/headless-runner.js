@@ -14,8 +14,8 @@
  * Options:
  *   --agent <names>       Comma-separated agent names to run
  *   --persona <name>      User proxy persona (default: compliant-user)
- *   --model <id>          LLM model for agent (default: openai/gpt-4o)
- *   --proxy-model <id>    LLM model for user proxy (default: gemini/gemini-2.5-flash)
+ *   --model <id>          LLM model for agent (default: openai/gpt-5.2)
+ *   --proxy-model <id>    LLM model for user proxy (default: gemini/gemini-3-flash-preview)
  *   --mock                Use mock responses (no API calls)
  *   --scenario <name>     Load scenario from tests/e2e/scenarios/
  *   --output <dir>        Output directory (default: tests/e2e/.tmp/)
@@ -31,11 +31,11 @@ const fs = require('fs');
 const path = require('path');
 const chalk = require('chalk');
 
-const { createProvider, listModels } = require('./lib/llm-provider');
-const { createToolBridge } = require('./lib/tool-bridge');
-const { getToolsForPhase } = require('./lib/tool-schemas');
-const { createMockRegistry, createPersonaRegistry } = require('./lib/mock-responses');
-const { SimulationTracer } = require('./lib/simulation-tracer');
+const { createProvider, listModels } = require('./llm-provider');
+const { createToolBridge } = require('./tool-bridge');
+const { getToolsForPhase } = require('./tool-schemas');
+const { createMockRegistry, createPersonaRegistry } = require('./mock-responses');
+const { SimulationTracer } = require('./simulation-tracer');
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 
@@ -49,8 +49,8 @@ const REPORTS_DIR = path.join(ROOT_DIR, 'tests', 'e2e', 'reports');
 const AGENT_PHASES = ['scout', 'challenger', 'analyst', 'pm', 'architect', 'developer'];
 
 const DEFAULT_CONFIG = {
-  agentModel: 'openai/gpt-4o',
-  proxyModel: 'gemini/gemini-2.5-flash',
+  agentModel: 'openai/gpt-5.2',
+  proxyModel: 'gemini/gemini-3-flash-preview',
   persona: 'compliant-user',
   maxTurns: 50,
   reasoningEffort: 'medium'

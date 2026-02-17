@@ -104,7 +104,15 @@ function showHelp() {
   console.log('  regulatory           Run regulatory compliance gate');
   console.log('  boundaries           Validate plan against product-brief boundaries');
   console.log('  task-deps            Audit task dependency graph');
-  console.log('  diff <path>          Show dry-run diff summary\n');
+  console.log('  diff <path>          Show dry-run diff summary');
+  console.log('  dashboard            Interactive progress dashboard');
+  console.log('  validate-all         Proactive validation & suggestion engine');
+  console.log('  quickstart           5-minute quickstart wizard');
+  console.log('  rewind <phase>       Rewind to target phase, archiving downstream artifacts');
+  console.log('  approve [path]       Approve current or specified phase artifact');
+  console.log('  reject [path]        Reject artifact with reason');
+  console.log('  checkpoint <action>  Session checkpoints (create/list/restore)');
+  console.log('  handoff              Export portable handoff package\n');
   console.log(chalk.bold('OPTIONS:'));
   console.log('  <directory>        Target directory (default: current directory)');
   console.log('  --name <name>      Set project name in config');
@@ -126,7 +134,22 @@ function showHelp() {
   console.log('  npx jumpstart-mode ./existing-app --type brownfield --copilot');
   console.log('  npx jumpstart-mode --dry-run .');
   console.log('  npx jumpstart-mode verify');
-  console.log('  npx jumpstart-mode verify --file specs/architecture.md --strict\n');
+  console.log('  npx jumpstart-mode verify --file specs/architecture.md --strict');
+  console.log('  npx jumpstart-mode dashboard');
+  console.log('  npx jumpstart-mode dashboard --json');
+  console.log('  npx jumpstart-mode validate-all');
+  console.log('  npx jumpstart-mode validate-all --file specs/prd.md --strict');
+  console.log('  npx jumpstart-mode quickstart');
+  console.log('  npx jumpstart-mode rewind 2');
+  console.log('  npx jumpstart-mode rewind 1 --reason "Re-evaluating scope"');
+  console.log('  npx jumpstart-mode approve');
+  console.log('  npx jumpstart-mode approve specs/prd.md --approver "Jane"');
+  console.log('  npx jumpstart-mode reject specs/prd.md --reason "Missing epic 3"');
+  console.log('  npx jumpstart-mode checkpoint create "Before refactor"');
+  console.log('  npx jumpstart-mode checkpoint list');
+  console.log('  npx jumpstart-mode checkpoint restore cp-1234567890');
+  console.log('  npx jumpstart-mode handoff');
+  console.log('  npx jumpstart-mode handoff --output ./export/handoff.md --json\n');
 }
 
 // Detect whether a target directory is a greenfield or brownfield project
@@ -1051,6 +1074,399 @@ async function main() {
       } else {
         const io = require('./lib/io');
         io.writeResult(result);
+      }
+      return;
+    }
+
+    if (subcommand === 'next') {
+      // Auto-pilot phase progression (UX Feature 1)
+      const { determineNextAction } = await import('./lib/next-phase.js');
+      const result = determineNextAction({ root: process.cwd() });
+      const io = require('./lib/io');
+      io.writeResult(result);
+      return;
+    }
+
+    if (subcommand === 'ceremony') {
+      // Ceremony profile management (UX Feature 3)
+      const { expandProfile, getProfileDescription, getProfileSummary, compareProfiles, VALID_PROFILES } = await import('./lib/ceremony.js');
+      const action = process.argv[3];
+      const io = require('./lib/io');
+
+      if (action === 'set') {
+        const profile = process.argv[4];
+        if (!profile || !VALID_PROFILES.includes(profile)) {
+          console.error(chalk.red(`Usage: jumpstart-mode ceremony set <${VALID_PROFILES.join('|')}>`));
+          process.exit(1);
+        }
+        // Update config.yaml ceremony.profile
+        const configPath = path.join(process.cwd(), '.jumpstart', 'config.yaml');
+        if (fs.existsSync(configPath)) {
+          let content = fs.readFileSync(configPath, 'utf8');
+          content = content.replace(
+            /^(\s*profile:\s*)\S+/m,
+            `$1${profile}`
+          );
+          fs.writeFileSync(configPath, content, 'utf8');
+          console.log(chalk.green(`Ceremony profile set to: ${profile}`));
+          console.log(chalk.gray(getProfileDescription(profile)));
+        } else {
+          console.error(chalk.red('Config file not found. Run jumpstart-mode init first.'));
+          process.exit(1);
+        }
+        return;
+      }
+
+      if (action === 'compare') {
+        const a = process.argv[4] || 'light';
+        const b = process.argv[5] || 'rigorous';
+        const diffs = compareProfiles(a, b);
+        io.writeResult({ comparison: `${a} vs ${b}`, differences: diffs });
+        return;
+      }
+
+      // Default: show summary
+      const summary = getProfileSummary();
+      io.writeResult(summary);
+      return;
+    }
+
+    if (subcommand === 'summarize') {
+      // Smart context summarizer (UX Feature 9)
+      const { generateContextPacket, renderContextMarkdown } = require('./lib/context-summarizer');
+      const phaseArg = process.argv[3];
+      const formatArg = process.argv.includes('--markdown') ? 'markdown' : 'json';
+
+      if (!phaseArg || isNaN(parseInt(phaseArg))) {
+        console.error(chalk.red('Usage: jumpstart-mode summarize <phase> [--markdown]'));
+        console.error(chalk.gray('  phase: 0-4 (target phase that will consume the summary)'));
+        process.exit(1);
+      }
+
+      const packet = generateContextPacket({
+        target_phase: parseInt(phaseArg),
+        root: process.cwd()
+      });
+
+      if (formatArg === 'markdown') {
+        console.log(renderContextMarkdown(packet));
+      } else {
+        const io = require('./lib/io');
+        io.writeResult(packet);
+      }
+      return;
+    }
+
+    if (subcommand === 'dashboard') {
+      // Interactive Progress Dashboard (UX Feature 5)
+      const { gatherDashboardData, renderDashboardText } = await import('./lib/dashboard.js');
+      const jsonMode = process.argv.includes('--json');
+      const data = await gatherDashboardData({ root: process.cwd() });
+      if (jsonMode) {
+        const io = require('./lib/io');
+        io.writeResult(data);
+      } else {
+        console.log(renderDashboardText(data));
+      }
+      return;
+    }
+
+    if (subcommand === 'validate-all') {
+      // Proactive Validation & Suggestion Engine (UX Feature 7)
+      const { validateArtifactProactive, validateAllArtifacts, renderValidationReport } = require('./lib/proactive-validator');
+      const io = require('./lib/io');
+      const fileArg = process.argv.indexOf('--file') !== -1 ? process.argv[process.argv.indexOf('--file') + 1] : null;
+      const jsonMode = process.argv.includes('--json');
+      const strict = process.argv.includes('--strict');
+
+      if (fileArg) {
+        const result = validateArtifactProactive(path.resolve(fileArg), { strict });
+        if (jsonMode) {
+          io.writeResult(result);
+        } else {
+          const report = renderValidationReport({ files: [result], cross_file: {}, summary: { total_files: 1, total_diagnostics: result.diagnostics.length, pass_count: result.pass ? 1 : 0, fail_count: result.pass ? 0 : 1, avg_score: result.score } });
+          console.log(report);
+        }
+      } else {
+        const specsDir = path.join(process.cwd(), 'specs');
+        const result = await validateAllArtifacts(specsDir, { root: process.cwd(), strict });
+        if (jsonMode) {
+          io.writeResult(result);
+        } else {
+          console.log(renderValidationReport(result));
+        }
+      }
+      return;
+    }
+
+    if (subcommand === 'quickstart') {
+      // 5-Minute Quickstart Wizard (UX Feature 15)
+      const { DOMAIN_OPTIONS, CEREMONY_OPTIONS, buildQuickstartConfig, generateQuickstartSummary, applyConfigPatches } = await import('./lib/quickstart.js');
+
+      console.log(chalk.bold.blue('\n🚀 JumpStart Quickstart — Set up in under 60 seconds\n'));
+
+      // Step 1: Project name
+      const { projectName } = await prompts({
+        type: 'text',
+        name: 'projectName',
+        message: 'Project name:',
+        initial: path.basename(process.cwd())
+      });
+      if (projectName === undefined) { console.log(chalk.yellow('\n❌ Setup cancelled\n')); process.exit(0); }
+
+      // Step 2: Project type (auto-detect)
+      const detection = detectProjectType(process.cwd());
+      if (detection.signals.length > 0 && detection.type === 'brownfield') {
+        console.log(chalk.cyan(`\n🔍 Detected existing project signals: ${detection.signals.slice(0, 3).join(', ')}`));
+      }
+      const { projectType } = await prompts({
+        type: 'select',
+        name: 'projectType',
+        message: 'Project type:',
+        choices: [
+          { title: 'Greenfield (new project)', value: 'greenfield' },
+          { title: 'Brownfield (existing codebase)', value: 'brownfield' }
+        ],
+        initial: detection.type === 'brownfield' ? 1 : 0
+      });
+      if (!projectType) { console.log(chalk.yellow('\n❌ Setup cancelled\n')); process.exit(0); }
+
+      // Step 3: Domain
+      const { domain } = await prompts({
+        type: 'select',
+        name: 'domain',
+        message: 'Project domain:',
+        choices: DOMAIN_OPTIONS.map(d => ({ title: d.title, value: d.value, description: d.description }))
+      });
+      if (!domain) { console.log(chalk.yellow('\n❌ Setup cancelled\n')); process.exit(0); }
+
+      let customDomain = null;
+      if (domain === 'other') {
+        const { custom } = await prompts({
+          type: 'text',
+          name: 'custom',
+          message: 'Enter your project domain:',
+          initial: 'general'
+        });
+        customDomain = custom;
+      }
+
+      // Step 4: Ceremony level
+      const { ceremony } = await prompts({
+        type: 'select',
+        name: 'ceremony',
+        message: 'Ceremony level:',
+        choices: CEREMONY_OPTIONS.map(c => ({ title: c.title, value: c.value, description: c.description })),
+        initial: 1 // Standard is default
+      });
+      if (!ceremony) { console.log(chalk.yellow('\n❌ Setup cancelled\n')); process.exit(0); }
+
+      // Build config
+      const qsConfig = buildQuickstartConfig({
+        projectName,
+        projectType,
+        domain,
+        customDomain,
+        ceremony,
+        targetDir: '.'
+      });
+
+      // Run the standard install
+      const installConfig = {
+        targetDir: '.',
+        projectName: qsConfig.projectName,
+        approverName: null,
+        projectType: qsConfig.projectType,
+        copilot: qsConfig.copilot,
+        force: false,
+        dryRun: false,
+        interactive: false
+      };
+
+      await install(installConfig);
+
+      // Patch config.yaml with domain and ceremony
+      const configPath = path.join(process.cwd(), '.jumpstart', 'config.yaml');
+      if (fs.existsSync(configPath)) {
+        let content = fs.readFileSync(configPath, 'utf8');
+        content = applyConfigPatches(content, qsConfig);
+        fs.writeFileSync(configPath, content, 'utf8');
+      }
+
+      // Display summary
+      const summary = generateQuickstartSummary(qsConfig);
+      console.log(chalk.bold.green('\n✅ JumpStart initialized!\n'));
+      for (const line of summary.lines) {
+        console.log(chalk.white('  ' + line));
+      }
+      console.log('');
+      console.log(chalk.bold.green(`  ▶ Type ${chalk.white(summary.firstCommand)} to begin!`));
+      console.log(chalk.gray(`    ${summary.firstMessage}`));
+      console.log('');
+      return;
+    }
+
+    if (subcommand === 'rewind') {
+      // Phase Rewind with Cascade (UX Feature 2)
+      const { rewindToPhase, renderRewindReport } = await import('./lib/rewind.js');
+      const phaseArg = process.argv[3];
+      const jsonMode = process.argv.includes('--json');
+      const reasonIdx = process.argv.indexOf('--reason');
+      const reason = reasonIdx !== -1 ? process.argv[reasonIdx + 1] : undefined;
+
+      if (phaseArg === undefined || isNaN(parseInt(phaseArg))) {
+        console.error(chalk.red('Usage: jumpstart-mode rewind <phase> [--reason <text>] [--json]'));
+        console.error(chalk.gray('  phase: -1 to 4 (target phase to rewind to)'));
+        process.exit(1);
+      }
+
+      const result = await rewindToPhase(parseInt(phaseArg), { root: process.cwd(), reason });
+      if (jsonMode) {
+        const io = require('./lib/io');
+        io.writeResult(result);
+      } else {
+        console.log(renderRewindReport(result));
+      }
+      return;
+    }
+
+    if (subcommand === 'approve') {
+      // Programmatic Artifact Approval (UX Feature 4)
+      const { detectCurrentArtifact, approveArtifact, renderApprovalResult } = await import('./lib/approve.js');
+      const artifactPath = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : null;
+      const approverIdx = process.argv.indexOf('--approver');
+      const approver = approverIdx !== -1 ? process.argv[approverIdx + 1] : undefined;
+      const jsonMode = process.argv.includes('--json');
+
+      let targetPath = artifactPath;
+      if (!targetPath) {
+        const detected = detectCurrentArtifact({ root: process.cwd() });
+        if (!detected.artifact_path) {
+          console.error(chalk.red('No artifact detected for current phase. Specify a path: jumpstart-mode approve <path>'));
+          process.exit(1);
+        }
+        targetPath = detected.artifact_path;
+      }
+
+      const result = approveArtifact(path.resolve(targetPath), { root: process.cwd(), approver });
+      if (jsonMode) {
+        const io = require('./lib/io');
+        io.writeResult(result);
+      } else {
+        console.log(renderApprovalResult(result));
+      }
+      return;
+    }
+
+    if (subcommand === 'reject') {
+      // Programmatic Artifact Rejection (UX Feature 4)
+      const { detectCurrentArtifact, rejectArtifact, renderRejectionResult } = await import('./lib/approve.js');
+      const artifactPath = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : null;
+      const reasonIdx = process.argv.indexOf('--reason');
+      const reason = reasonIdx !== -1 ? process.argv[reasonIdx + 1] : 'No reason specified';
+      const jsonMode = process.argv.includes('--json');
+
+      let targetPath = artifactPath;
+      if (!targetPath) {
+        const detected = detectCurrentArtifact({ root: process.cwd() });
+        if (!detected.artifact_path) {
+          console.error(chalk.red('No artifact detected for current phase. Specify a path: jumpstart-mode reject <path>'));
+          process.exit(1);
+        }
+        targetPath = detected.artifact_path;
+      }
+
+      const result = rejectArtifact(path.resolve(targetPath), { root: process.cwd(), reason });
+      if (jsonMode) {
+        const io = require('./lib/io');
+        io.writeResult(result);
+      } else {
+        console.log(renderRejectionResult(result));
+      }
+      return;
+    }
+
+    if (subcommand === 'checkpoint') {
+      // Session Checkpointing (UX Feature 10)
+      const { createCheckpoint, restoreCheckpoint, listCheckpoints } = await import('./lib/state-store.js');
+      const action = process.argv[3];
+      const jsonMode = process.argv.includes('--json');
+      const io = require('./lib/io');
+
+      if (action === 'create') {
+        const label = process.argv[4] || undefined;
+        const result = createCheckpoint(label, { root: process.cwd() });
+        if (jsonMode) {
+          io.writeResult(result);
+        } else {
+          console.log(chalk.green(`✅ Checkpoint created: ${result.id}`));
+          if (result.label) console.log(chalk.gray(`   Label: ${result.label}`));
+          console.log(chalk.gray(`   Phase: ${result.phase ?? 'none'} | Artifacts: ${(result.approved_artifacts || []).length}`));
+        }
+        return;
+      }
+
+      if (action === 'list') {
+        const checkpoints = listCheckpoints(path.join(process.cwd(), '.jumpstart', 'state', 'state.json'));
+        if (jsonMode) {
+          io.writeResult(checkpoints);
+        } else {
+          if (checkpoints.length === 0) {
+            console.log(chalk.yellow('No checkpoints found.'));
+          } else {
+            console.log(chalk.bold(`\n📌 Checkpoints (${checkpoints.length}):\n`));
+            for (const cp of checkpoints) {
+              const date = new Date(cp.timestamp).toLocaleString();
+              console.log(chalk.white(`  ${cp.id}  ${date}  ${cp.label || '(no label)'}  phase=${cp.phase ?? '?'}`));
+            }
+            console.log('');
+          }
+        }
+        return;
+      }
+
+      if (action === 'restore') {
+        const cpId = process.argv[4];
+        if (!cpId) {
+          console.error(chalk.red('Usage: jumpstart-mode checkpoint restore <checkpoint-id>'));
+          process.exit(1);
+        }
+        const result = restoreCheckpoint(cpId, path.join(process.cwd(), '.jumpstart', 'state', 'state.json'));
+        if (jsonMode) {
+          io.writeResult(result);
+        } else {
+          if (result.success) {
+            console.log(chalk.green(`✅ Restored checkpoint: ${cpId}`));
+            console.log(chalk.gray(`   Phase: ${result.restored.phase ?? 'none'} | Artifacts: ${(result.restored.approved_artifacts || []).length}`));
+          } else {
+            console.error(chalk.red(`❌ ${result.error}`));
+          }
+        }
+        return;
+      }
+
+      console.error(chalk.red('Usage: jumpstart-mode checkpoint <create|list|restore> [args]'));
+      process.exit(1);
+    }
+
+    if (subcommand === 'handoff') {
+      // Export Handoff Package (UX Feature 14)
+      const { exportHandoffPackage } = require('./lib/export');
+      const outputIdx = process.argv.indexOf('--output');
+      const outputPath = outputIdx !== -1 ? process.argv[outputIdx + 1] : undefined;
+      const jsonMode = process.argv.includes('--json');
+
+      const result = exportHandoffPackage({ root: process.cwd(), outputPath });
+      if (jsonMode) {
+        const io = require('./lib/io');
+        io.writeResult(result);
+      } else {
+        if (result.success) {
+          console.log(chalk.green(`✅ Handoff package exported: ${result.output_path}`));
+          console.log(chalk.gray(`   Phases: ${result.stats.phases} | Approved: ${result.stats.approved} | Decisions: ${result.stats.decisions} | Open items: ${result.stats.open_items}`));
+        } else {
+          console.error(chalk.red(`❌ ${result.error}`));
+        }
       }
       return;
     }

@@ -8,6 +8,21 @@ tools: ['edit', 'execute', 'search', 'web', 'read', 'vscode', 'todo', 'agent', '
 
 You are now operating as **The Developer**, the Phase 4 agent in the Jump Start framework.
 
+## Session Briefing (Auto-Trigger)
+
+Before starting your protocol, check for prior session context:
+
+1. Read `.jumpstart/config.yaml` → check `session_briefing.enabled` and `session_briefing.auto_trigger`.
+2. If both are `true`, read `.jumpstart/state/state.json` and check the `resume_context` field.
+3. If `resume_context` contains prior work data (i.e., `resume_context.tldr` is not null):
+   - Present a **Session Resumption Briefing** to the human using the format from `.jumpstart/templates/session-briefing.md`.
+   - Read `.jumpstart/state/todos.json` for any incomplete protocol steps.
+   - Scan `specs/insights/*.md` for the most recent entries (up to `session_briefing.max_insights`).
+   - Scan `specs/*.md` for `[NEEDS CLARIFICATION]` tags.
+   - Include: **TLDR**, **Where You Left Off**, **What's Next**, **Key Insights**, **Open Questions**, and **Get Started** recommendation.
+4. If `resume_context` is null/empty (fresh project), skip the briefing and proceed directly to Pre-conditions.
+5. After presenting the briefing (if applicable), continue with the normal protocol below.
+
 ## Pre-conditions
 
 Verify that all preceding specs exist and are approved:
@@ -144,6 +159,18 @@ When all milestones are complete:
    - Set "Approved by" to the `project.approver` value from `.jumpstart/config.yaml`
    - Set "Approval date" to today's date
 4. Update `workflow.current_phase` to `4` in `.jumpstart/config.yaml`.
+5. **Update resume context** — Write `resume_context` to `.jumpstart/state/state.json` using the state-store update mechanism (edit the file directly or use `bin/lib/state-store.js`). Set the `resume_context` field to a JSON object with:
+   - `tldr`: 1-sentence summary of what the Developer accomplished (e.g., "Implementation complete — all milestones delivered, tests passing, documentation updated.")
+   - `last_action`: The final milestone completed (e.g., "Milestone 3: Final Documentation & Cleanup")
+   - `next_action`: "Project build phase complete. Consider running /jumpstart.party for retrospective or manual review."
+   - `next_command`: "/jumpstart.status" (review final project state)
+   - `open_questions`: Array of any `[NEEDS CLARIFICATION]` items or deviations flagged during implementation
+   - `key_insights`: Array of the top 3-5 insight entries from `specs/insights/implementation-plan-insights.md` (brief summaries)
+   - `last_agent`: "developer"
+   - `last_phase`: 4
+   - `last_step`: "Phase Gate Approved"
+   - `timestamp`: Current ISO date
+   Also update `current_phase`, `current_agent`, and `last_completed_step` in the same state file.
 
 ## Deviation Rules
 

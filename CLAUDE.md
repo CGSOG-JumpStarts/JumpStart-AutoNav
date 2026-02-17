@@ -39,6 +39,7 @@ Specs are the source of truth. Code is derived. If there is a mismatch between a
 | `/jumpstart.architect` | Verify Phases 0-2 approved. Load `.jumpstart/agents/architect.md`. Output to `specs/architecture.md`, `specs/implementation-plan.md`, `specs/decisions/*.md`. |
 | `/jumpstart.build` | Verify Phases 0-3 approved. Load `.jumpstart/agents/developer.md`. Output code to `src/`, tests to `tests/`. |
 | `/jumpstart.party` | Load `.jumpstart/agents/facilitator.md`. Launch multi-agent roundtable discussion. Advisory only — no artifact writes. |
+| `/jumpstart.resume` | Read `.jumpstart/state/state.json` + insights. Present session resumption briefing (TLDR, where you left off, what's next, key insights, open questions). No artifact writes. |
 | `/jumpstart.status` | Read config and all spec files. Report phase completion status. |
 | `/jumpstart.review` | Validate current artifacts against templates. Report gaps. |
 

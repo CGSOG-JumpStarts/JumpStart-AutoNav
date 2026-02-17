@@ -80,6 +80,22 @@ context7:
   citation_marker: "[Context7: {lib}@{version}]"  # Citation format for docs
 
 # ---------------------------------------------------------------------------
+# Ceremony Profile (UX Feature 3)
+# ---------------------------------------------------------------------------
+# Controls the overall rigor level of the framework. Profiles expand into
+# concrete config overrides as a base layer — explicit settings below still win.
+#
+#   light:    Minimal ceremony — quick elicitation, fewer gates, relaxed thresholds.
+#             Best for prototypes, small features, and rapid iteration.
+#   standard: Balanced workflow (default). All core gates enabled, advisory agents
+#             available but not mandatory.
+#   rigorous: Maximum rigor — deep elicitation, mandatory adversarial + security
+#             review, strict TDD, comprehensive quality gates.
+#             Best for enterprise, regulated, or high-risk projects.
+ceremony:
+  profile: standard
+
+# ---------------------------------------------------------------------------
 # Workflow Settings
 # ---------------------------------------------------------------------------
 workflow:
@@ -315,6 +331,20 @@ state:
   todos_file: ".jumpstart/state/todos.json"    # Path to protocol progress tracking
   adr_index_file: ".jumpstart/state/adr-index.json"  # Path to ADR search index
   auto_save: true                       # Auto-save state after each agent action
+
+# ---------------------------------------------------------------------------
+# Session Briefing (Item 101)
+# ---------------------------------------------------------------------------
+# When starting a new session, agents present a concise briefing summarising
+# where work left off, what comes next, key insights, and open questions.
+# Data is sourced from state.json resume_context, insights files, and specs.
+session_briefing:
+  enabled: true                         # Enable session resumption briefing
+  auto_trigger: true                    # Show briefing automatically on agent activation
+  include_insights: true                # Pull recent entries from specs/insights/ files
+  include_open_questions: true          # Surface [NEEDS CLARIFICATION] tags and unanswered QA items
+  max_insights: 5                       # Maximum number of insight entries to show in briefing
+  template: ".jumpstart/templates/session-briefing.md"  # Briefing template path
 
 # ---------------------------------------------------------------------------
 # Rollback & Archive (Items 40/50)

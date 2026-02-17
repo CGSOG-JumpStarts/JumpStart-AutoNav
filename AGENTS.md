@@ -52,6 +52,7 @@ flowchart TB
 <br>`specs/implementation-plan.md` |
 | **4** | **The Developer** | `/jumpstart.build` | Writes code and tests according to the plan. | `src/`, `tests/`, `README.md` |
 | **Any** | **The Facilitator** | `/jumpstart.party` | Orchestrates multi-agent roundtable discussions. Advisory only. | None (insights only) |
+| **Any** | **System** | `/jumpstart.resume` | Session resumption briefing: TLDR, where you left off, what's next, key insights, open questions. | None (briefing only) |
 
 ---
 
@@ -66,6 +67,8 @@ All agents must follow these directives without exception.
 * *Analyst* reads *Challenger Brief*.
 * *Architect* reads *PRD*, *Product Brief*, and *Challenger Brief*.
 * **Brownfield Context:** If `project.type` is `brownfield`, all agents (Phase 0–4) must also read `specs/codebase-context.md` to understand the existing codebase.
+* **Session Briefing:** When `session_briefing.auto_trigger` is `true` in config and `.jumpstart/state/state.json` contains a non-null `resume_context`, phase agents must present a session resumption briefing before starting their protocol. The briefing includes TLDR, where you left off, what's next, key insights, and open questions. Use `.jumpstart/templates/session-briefing.md` for the format. Skip the briefing when `resume_context` is null (fresh project).
+* **Resume Context Persistence:** Before yielding control (at phase completion, before asking for approval, or when interrupted mid-phase), agents must update `resume_context` in `.jumpstart/state/state.json` with current progress so the next session can resume accurately.
 * Do not hallucinate requirements that contradict upstream documents.
 
 

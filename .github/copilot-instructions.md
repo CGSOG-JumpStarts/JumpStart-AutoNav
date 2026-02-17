@@ -61,6 +61,7 @@ Phases are strictly sequential. Each must be completed and approved by the human
 7. Read `.jumpstart/roadmap.md` at activation. Roadmap principles are non-negotiable and supersede agent-specific instructions.
 8. When `workflow.qa_log` is `true`, log every question-and-response exchange to `specs/qa-log.md` (append-only, sequential numbering).
 9. Read `.jumpstart/roadmap.md` for engineering articles governing code quality and architecture decisions.
+14. **Session Resumption Briefing (Item 39+):** When `session_briefing.auto_trigger` is `true` in config and `resume_context` in `.jumpstart/state/state.json` is non-null, phase agents present a briefing before starting their protocol. Use `/jumpstart.resume` for a standalone briefing at any time. Agents must update `resume_context` before yielding control.
 10. Use Context7 MCP for ALL external documentation lookups. Never guess API details from training data.
 11. **Never Guess (Item 69):** If any requirement, detail, or context is ambiguous, do NOT guess or infer. Tag it with `[NEEDS CLARIFICATION: description]` and ask the human. See `.jumpstart/templates/needs-clarification.md` for format rules.
 12. **Cross-Assistant Portability (Item 95):** This framework works across multiple AI assistants (Copilot, Cursor, Claude Code, Windsurf). See `.jumpstart/compat/assistant-mapping.md` for tool-specific configuration mapping.
