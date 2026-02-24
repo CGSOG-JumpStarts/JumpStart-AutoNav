@@ -359,7 +359,7 @@ cp .env.example .env
 | `OPENAI_API_KEY` | Fallback API key (used when `LITELLM_API_KEY` is not set) | — |
 | `DEBUG` | Enable verbose error stack traces | — |
 
-The `.env` file is loaded automatically via `dotenv` when the headless runner starts. See the [Headless Agent Emulation](../README.md#headless-agent-emulation) section in the README for full usage instructions.
+The `.env` file is loaded automatically via `dotenv` when the headless runner starts. See the [Headless Agent Emulation](https://github.com/otey247/JumpStart/blob/master/README.md#headless-agent-emulation) section in the README for full usage instructions.
 
 ---
 
@@ -1210,13 +1210,13 @@ my-app/
 - **Agent details:** `.jumpstart/agents/*.md`
 - **Configuration options:** `.jumpstart/config.yaml` (fully commented)
 - **Cross-assistant setup:** `.jumpstart/compat/assistant-mapping.md`
-- **README:** See the root `README.md`
+- **README:** See the root [README](https://github.com/otey247/JumpStart/blob/master/README.md)
 
 ---
 
 ## Next Steps
 
-- Read the [README](../README.md) for the full feature reference
+- Read the [README](https://github.com/otey247/JumpStart/blob/master/README.md) for the full feature reference
 - Explore `.jumpstart/config.yaml` to see all configuration options
 - Browse `.jumpstart/agents/` to understand each agent's persona and protocol
 - Check `.jumpstart/skills/` for available skills (and create your own with the skill-creator)

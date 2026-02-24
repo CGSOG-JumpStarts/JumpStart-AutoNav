@@ -91,7 +91,7 @@ Every phase produces an artifact (stored in `specs/`). Every artifact must be ex
 - **Tools:** `ask_questions` (deviation decisions), `manage_todo_list`, **Context7 MCP** (before writing external integration code), `spec-drift.js` (run before each milestone)
 - **Outputs:** `TODO.md`, `src/` (application code), `tests/` (test code), updated `README.md`, updated `specs/implementation-plan.md` with completion status, TDD artifacts (if active), insights file
 - **Deviation Handling:** Minor (implement + document), Major (stop, present options, wait for human), Architectural (never — halt and escalate to Architect)
-- **Key Constraint:** Executor, not strategist. Follows the plan. Untested code is unfinished. Functions <40-50 lines. No gold-plating. Commits follow `jumpstart(M1-T01): [title]` format.
+- **Key Constraint:** Executor, not strategist. Follows the plan. Untested code is unfinished. Functions &lt;40-50 lines. No gold-plating. Commits follow `jumpstart(M1-T01): [title]` format.
 
 #### 3.7 The Facilitator (Party Mode — Any Phase)
 
@@ -138,7 +138,7 @@ JumpStart enforces a **5-layer automated quality gate** (Roadmap Article VIII):
 |---|---|---|
 | **1. Schema & Formatting** | YAML frontmatter, required sections, ID formats | `validator.js` |
 | **2. Handoff Contracts** | Phase transitions, no phantom requirements, upstream traceability | `handoff-validator.js` |
-| **3. Unit Tests for English** | Ambiguity (<5 vague adjectives), passive voice (<10), metric coverage (≥80%), terminology drift, spec smells (<5.0/100 lines) | `spec-tester.js`, `smell-detector.js` |
+| **3. Unit Tests for English** | Ambiguity (&lt;5 vague adjectives), passive voice (&lt;10), metric coverage (≥80%), terminology drift, spec smells (&lt;5.0/100 lines) | `spec-tester.js`, `smell-detector.js` |
 | **4. LLM-as-a-Judge** | Adversary stress-tests + Reviewer scoring (opt-in via config) | Adversary agent, Reviewer agent |
 | **5. Regression Golden Masters** | Structural diff against verified baselines (≥85% similarity) | Golden master comparison |
 
