@@ -255,6 +255,90 @@ function createToolBridge(options = {}) {
       return { success: !!evt, event_id: evt ? evt.id : null };
     },
 
+    // ── Item-Tagged Feature Tool Handlers ──────────────────────────────────
+
+    async run_revert(args) {
+      try {
+        const { revertArtifact } = await import('./revert.js');
+        return revertArtifact({ artifact: args.artifact, reason: args.reason, archive_dir: args.archive_dir });
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    },
+
+    async run_adr_index(args) {
+      try {
+        const { buildIndex, searchIndex } = await import('./adr-index.js');
+        const root = args.root || workspaceDir;
+        if (args.action === 'search') {
+          const index = buildIndex(root);
+          return searchIndex(index, args.query || '', { tag: args.tag });
+        }
+        return buildIndex(root);
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    },
+
+    async run_complexity(args) {
+      try {
+        const { calculateComplexity } = await import('./complexity.js');
+        return calculateComplexity({ description: args.description || '', root: args.root || workspaceDir });
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    },
+
+    async run_crossref(args) {
+      try {
+        const { validateCrossRefs } = await import('./crossref.js');
+        return validateCrossRefs(args.specs_dir || 'specs', args.root || workspaceDir);
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    },
+
+    async run_init(args) {
+      try {
+        const { generateInitConfig } = await import('./init.js');
+        return generateInitConfig({ skill_level: args.skill_level || 'intermediate', project_type: args.project_type || 'greenfield' });
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    },
+
+    async run_lock(args) {
+      try {
+        const { acquireLock, releaseLock, lockStatus, listLocks } = await import('./locks.js');
+        if (args.action === 'acquire') return acquireLock(args.file, args.agent || 'headless');
+        if (args.action === 'release') return releaseLock(args.file, args.agent || 'headless');
+        if (args.action === 'status') return lockStatus(args.file);
+        return listLocks();
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    },
+
+    async run_timestamp(args) {
+      try {
+        const { now, validate, audit } = await import('./timestamps.js');
+        if (args.action === 'validate') return validate(args.value);
+        if (args.action === 'audit') return audit(args.file);
+        return { timestamp: now() };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    },
+
+    async run_scan(args) {
+      try {
+        const { scan } = await import('./scanner.js');
+        return scan({ root: args.root || workspaceDir, ignore: args.ignore });
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    },
+
     // ── Quality Gate Tool Handlers ──────────────────────────────────────────
 
     async run_secret_scan(args) {

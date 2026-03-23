@@ -312,7 +312,7 @@ Beyond the six core phase agents, Jump Start includes **16 advisory agents** tha
 
 ## CLI Tools
 
-The `jumpstart-mode` CLI provides 29 subcommands for automated quality checks and project management. Run them from the command line:
+The `jumpstart-mode` CLI provides 39 subcommands for automated quality checks and project management. Run them from the command line:
 
 ```bash
 npx jumpstart-mode <subcommand> [options]
@@ -363,6 +363,67 @@ npx jumpstart-mode <subcommand> [options]
 | `self-evolve` | Generate config improvement proposals |
 | `upgrade` | Safely upgrade framework files (preserves user content) |
 | `upgrade --restore` | Restore files from upgrade backups |
+
+### Enterprise Platform Features
+
+The following 10 commands unlock top-tier platform capabilities for scaled, multi-team projects:
+
+| Subcommand | Purpose |
+|------------|--------|
+| `multi-repo <init\|link\|status\|plan>` | **Multi-repo program orchestration** — link frontend, backend, infra, data and docs repos into one initiative with shared specs, dependencies, and release plans |
+| `bidirectional-trace [scan\|report]` | **True bidirectional traceability** — auto-link requirements to files, functions, tests, PRs, and deployments; measure coverage gaps |
+| `impact <file> [--symbol] [--spec]` | **Agentic change impact analysis** — before editing, see which requirements, tests, services and APIs are affected |
+| `repo-graph [build\|query]` | **Automated repo understanding graph** — build and persist a semantic graph of domains, modules, APIs, ownership, decisions and dependencies |
+| `memory <add\|list\|search\|recall>` | **Persistent long-term project memory** — capture team decisions, rejected options, recurring pitfalls, and tribal knowledge |
+| `policy <check\|list\|add>` | **Enterprise policy engine** — enforce org-specific rules for architecture, naming, security, legal, AI usage and deployment standards |
+| `branch-workflow [track\|status\|sync]` | **Branch-aware workflow engine** — track specs, approvals and implementation plans per git branch and PR |
+| `pr-package <create\|list\|export>` | **PR-native execution mode** — generate PR-ready work packages with summary, risk notes, test evidence and rollback guidance |
+| `parallel-agents [run\|status\|reconcile]` | **Multi-agent concurrent execution** — run architect, security, QA, docs and performance sidecars in parallel and reconcile conflicts |
+| `role-approval <assign\|approve\|reject\|status>` | **Human approval workflows with roles** — assign named approvers by role (product, architect, security, legal, platform) |
+
+#### Quick examples
+
+```bash
+# Initialize a cross-repo program
+npx jumpstart-mode multi-repo init "Platform v2"
+npx jumpstart-mode multi-repo link https://github.com/org/frontend frontend
+npx jumpstart-mode multi-repo link https://github.com/org/backend  backend
+
+# Scan bidirectional traceability and view gap report
+npx jumpstart-mode bidirectional-trace scan
+npx jumpstart-mode bidirectional-trace report
+
+# Analyze impact of changing auth.service.js
+npx jumpstart-mode impact src/auth.service.js
+
+# Build semantic repo graph and query for APIs
+npx jumpstart-mode repo-graph build
+npx jumpstart-mode repo-graph query --type api
+
+# Record a team decision in persistent memory
+npx jumpstart-mode memory add --type decision --title "Use JWT" --content "Chose JWT over sessions for statelessness."
+npx jumpstart-mode memory search jwt
+
+# Add and run enterprise policies
+npx jumpstart-mode policy add --name "No console.log" --desc "Remove debug logging" --category security --pattern "console\\.log"
+npx jumpstart-mode policy check
+
+# Track the current branch and link a PR
+npx jumpstart-mode branch-workflow track --pr 42
+npx jumpstart-mode branch-workflow status
+
+# Create a PR work package
+npx jumpstart-mode pr-package create --title "Add auth" --summary "JWT auth implementation" --risk "Session expiry"
+
+# Run security + QA agents in parallel and reconcile
+npx jumpstart-mode parallel-agents run security,qa
+npx jumpstart-mode parallel-agents reconcile <run-id>
+
+# Set up role-based approval for the PRD
+npx jumpstart-mode role-approval assign specs/prd.md product,architect,security
+npx jumpstart-mode role-approval approve specs/prd.md product --approver "Alice"
+npx jumpstart-mode role-approval status specs/prd.md
+```
 
 ---
 

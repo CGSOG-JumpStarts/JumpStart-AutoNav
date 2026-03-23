@@ -281,6 +281,132 @@ const ALL_TOOLS = [
       }
     }
   },
+  // ─── Item-Tagged Feature Tools ─────────────────────────────────────────
+  {
+    type: 'function',
+    function: {
+      name: 'run_revert',
+      description: 'Archive a rejected artifact draft and restore the last approved version from git. (Item 40)',
+      parameters: {
+        type: 'object',
+        properties: {
+          artifact: { type: 'string', description: 'Path to the artifact file to revert.' },
+          reason: { type: 'string', description: 'Reason for reverting.' },
+          archive_dir: { type: 'string', description: 'Archive directory (default: .jumpstart/archive).' }
+        },
+        required: ['artifact']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'run_adr_index',
+      description: 'Build or search an index of Architecture Decision Records. (Item 51)',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['build', 'search'], description: 'Action to perform.' },
+          root: { type: 'string', description: 'Project root directory.' },
+          query: { type: 'string', description: 'Search query (for search action).' },
+          tag: { type: 'string', description: 'Filter by tag (for search action).' }
+        },
+        required: ['action']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'run_complexity',
+      description: 'Calculate adaptive planning depth (quick/standard/deep) from project signals. (Item 33)',
+      parameters: {
+        type: 'object',
+        properties: {
+          description: { type: 'string', description: 'Free-text problem statement.' },
+          root: { type: 'string', description: 'Project root directory.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'run_crossref',
+      description: 'Validate cross-reference links in spec artifacts and detect broken links and orphan sections. (Item 47)',
+      parameters: {
+        type: 'object',
+        properties: {
+          specs_dir: { type: 'string', description: 'Path to specs directory (default: specs).' },
+          root: { type: 'string', description: 'Project root directory.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'run_init',
+      description: 'Generate initialization configuration based on skill level and project type. (Item 76)',
+      parameters: {
+        type: 'object',
+        properties: {
+          skill_level: { type: 'string', enum: ['beginner', 'intermediate', 'expert'], description: 'User skill level.' },
+          project_type: { type: 'string', enum: ['greenfield', 'brownfield'], description: 'Project type.' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'run_lock',
+      description: 'Manage artifact file locks for concurrent agent access. (Item 45)',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['acquire', 'release', 'status', 'list'], description: 'Lock action.' },
+          file: { type: 'string', description: 'File path to lock/unlock (required for acquire/release/status).' },
+          agent: { type: 'string', description: 'Agent name acquiring/releasing the lock.' }
+        },
+        required: ['action']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'run_timestamp',
+      description: 'Generate, validate, or audit UTC timestamps in ISO 8601 format. (Item 60)',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: { type: 'string', enum: ['now', 'validate', 'audit'], description: 'Timestamp action.' },
+          value: { type: 'string', description: 'Timestamp string to validate (for validate action).' },
+          file: { type: 'string', description: 'File path to audit timestamps in (for audit action).' }
+        },
+        required: ['action']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'run_scan',
+      description: 'Scan project directory to detect tech stack, dependencies, patterns, and risks. (Item 49)',
+      parameters: {
+        type: 'object',
+        properties: {
+          root: { type: 'string', description: 'Project root directory.' },
+          ignore: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Directories to ignore.'
+          }
+        }
+      }
+    }
+  },
   // ─── Quality Gate Tools ────────────────────────────────────────────────────
   {
     type: 'function',
@@ -407,8 +533,8 @@ const PHASE_TOOL_ADDITIONS = {
   challenger: [],
   analyst:    [],
   pm:         [],
-  architect:  ['marketplace_install'],
-  developer:  ['run_in_terminal', 'marketplace_install', 'run_secret_scan', 'run_type_check', 'run_smoke_test', 'run_uat_coverage']
+  architect:  ['marketplace_install', 'run_adr_index', 'run_complexity', 'run_crossref', 'run_lock', 'run_scan', 'run_init'],
+  developer:  ['run_in_terminal', 'marketplace_install', 'run_secret_scan', 'run_type_check', 'run_smoke_test', 'run_uat_coverage', 'run_revert', 'run_adr_index', 'run_complexity', 'run_crossref', 'run_lock', 'run_timestamp', 'run_scan', 'run_init']
 };
 
 /**

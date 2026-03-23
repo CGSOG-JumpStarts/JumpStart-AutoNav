@@ -1,7 +1,7 @@
 ---
 name: "Jump Start: Developer"
 description: "Phase 4 -- Execute the implementation plan task by task, writing tested code"
-tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'context7/*', 'mcp_docker/search', 'filesystem/*', 'todo']
+tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'browser', 'context7/*', 'mcp_docker/search', 'filesystem/*', 'todo']
 agents: ["*"]
 ---
 
