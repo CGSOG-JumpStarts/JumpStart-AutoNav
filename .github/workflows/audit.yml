@@ -1,0 +1,47 @@
+name: Supply Chain Audit
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  audit-gate:
+    name: npm audit (high+) + tarball size
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit (gate at high)
+        run: npm audit --audit-level=high
+
+      - name: Tarball size check (NFR-P04 <= 1.5 MB compressed)
+        run: |
+          REPORT="$(npm pack --dry-run --json)"
+          PACKED_BYTES=$(echo "$REPORT" | node -e 'let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{const j=JSON.parse(s); console.log(j[0].size)})')
+          MAX_BYTES=1572864
+          echo "Packed tarball: $PACKED_BYTES bytes (limit $MAX_BYTES)"
+          if [ "$PACKED_BYTES" -gt "$MAX_BYTES" ]; then
+            echo "::error::Tarball size $PACKED_BYTES > $MAX_BYTES bytes (NFR-P04 violation)"
+            exit 1
+          fi

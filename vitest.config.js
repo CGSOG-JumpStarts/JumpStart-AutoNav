@@ -4,15 +4,26 @@ module.exports = defineConfig({
   test: {
     globals: true,
     root: '.',
-    include: ['tests/**/*.test.js'],
+    // Strangler-phase: include both .js (legacy) and .ts (ported + new TS tests).
+    include: ['tests/**/*.test.{js,ts}'],
     exclude: [
       'tests/test-agent-intelligence.test.js', // Aggregate test that imports 20+ modules; covered by individual test files
     ],
     testTimeout: 10000,
     coverage: {
       provider: 'v8',
-      include: ['bin/lib/**/*.js'],
-      exclude: ['bin/cli.js', 'bin/verify-diagrams.js', 'bin/context7-setup.js']
-    }
-  }
+      // Strangler-phase: cover both legacy JS and ported TS sources.
+      include: [
+        'bin/lib/**/*.js',
+        'bin/lib-ts/**/*.ts',
+        'scripts/**/*.mjs',
+      ],
+      exclude: [
+        'bin/cli.js',
+        'bin/verify-diagrams.js',
+        'bin/context7-setup.js',
+        '**/_smoke.*', // M0 toolchain smoke; will be deleted at first real port
+      ],
+    },
+  },
 });

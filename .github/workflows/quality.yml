@@ -6,26 +6,43 @@ on:
       - 'specs/**'
       - '.jumpstart/**'
       - 'tests/**'
+      - 'bin/**'
+      - 'src/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'install.sh'
+      - 'tsconfig.json'
   push:
     branches: [main]
     paths:
       - 'specs/**'
       - '.jumpstart/**'
       - 'tests/**'
+      - 'bin/**'
+      - 'src/**'
+      - 'scripts/**'
+      - 'package.json'
 
 jobs:
   quality-gate:
-    name: 5-Layer Quality Gate
+    name: 5-Layer Quality Gate (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
-
+    timeout-minutes: 7
+    strategy:
+      fail-fast: false
+      matrix:
+        # Strangler phase: support both 22 (Maintenance LTS) and 24 (Active LTS).
+        # Per ADR-005 + Pit Crew Adversary, 1.x stays on >=22 floor.
+        node: ['22', '24']
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -43,23 +60,10 @@ jobs:
       - name: Layer 5 — Regression Golden Masters
         run: npx vitest run tests/test-regression.test.js --reporter=verbose
 
-      - name: All Tests — Batched
+      - name: Vitest full suite
         if: always()
-        run: |
-          # Discover all test files, exclude the OOM-causing aggregate test,
-          # then run in batches of 15 to stay within Node.js heap limits.
-          files=$(find tests -maxdepth 1 -type f -name '*.test.js' \
-                    ! -name 'test-agent-intelligence.test.js' | sort)
-          batch=()
-          for f in $files; do
-            batch+=("$f")
-            if [ ${#batch[@]} -ge 15 ]; then
-              echo "--- Running batch: ${batch[*]} ---"
-              npx vitest run "${batch[@]}" --reporter=verbose
-              batch=()
-            fi
-          done
-          if [ ${#batch[@]} -gt 0 ]; then
-            echo "--- Running final batch: ${batch[*]} ---"
-            npx vitest run "${batch[@]}" --reporter=verbose
-          fi
+        run: npx vitest run
+
+      - name: npm audit (gate at high)
+        if: always()
+        run: npm audit --audit-level=high

@@ -22,11 +22,15 @@ dist/
 build/
 *.tgz
 
+# TypeScript
+*.tsbuildinfo
+
+# Coverage
+coverage/
+*.lcov
+
 # Documentation
 /TODO.md
-
-# Documentation site
-#/docs_site/
 
 # MCP config (if contains API key)
 #.vscode/mcp.json
@@ -37,8 +41,10 @@ tests/e2e/reports/*.json
 
 # VS Code Copilot agent hook transient state
 .jumpstart/state/hook-state.json
+.jumpstart/state/baseline-verification.json
 
 # Auto-generated changelog drafts (review then fold into CHANGELOG.md)
 specs/changelog-drafts/
 
-
+# Coverage ratchet candidate (review before promoting to baseline)
+tests/coverage-baseline.candidate.json

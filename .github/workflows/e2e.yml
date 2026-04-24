@@ -1,0 +1,46 @@
+name: E2E Holodeck Baseline
+
+on:
+  pull_request:
+    paths:
+      - 'bin/**'
+      - 'src/**'
+      - '.jumpstart/**'
+      - 'tests/e2e/**'
+      - 'package.json'
+      - '.github/workflows/e2e.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bin/**'
+      - 'src/**'
+      - '.jumpstart/**'
+
+jobs:
+  holodeck-baseline:
+    name: Holodeck baseline scenario
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run holodeck baseline scenario
+        run: node bin/holodeck.js --scenario baseline
+
+      - name: Upload holodeck report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: holodeck-baseline-report
+          path: tests/e2e/reports/baseline-*.json
+          retention-days: 14

@@ -1,0 +1,105 @@
+name: TypeScript Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'bin/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'tsconfig.json'
+      - 'tsdown.config.ts'
+      - 'biome.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/typescript.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'bin/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'tsconfig.json'
+      - 'tsdown.config.ts'
+      - 'biome.json'
+      - 'package.json'
+
+jobs:
+  typescript:
+    name: TypeScript + Biome + Coverage Ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript strict check
+        run: npx tsc --noEmit
+
+      - name: Biome lint + format
+        run: npx biome check --error-on-warnings .
+
+      - name: Build (tsdown)
+        run: npm run build
+
+      - name: Post-build shebang assertion (NFR-D02 / SEC-005)
+        run: |
+          if [ -f dist/cli.js ]; then
+            head -c 19 dist/cli.js | diff - <(echo '#!/usr/bin/env node') || {
+              echo "::error::dist/cli.js shebang missing or corrupted (per SEC-005 NFR-R04)"
+              exit 1
+            }
+          else
+            echo "::notice::dist/cli.js not yet emitted (pre-M8); shebang assertion dormant"
+          fi
+          if [ -f dist/bootstrap/init.js ]; then
+            head -c 19 dist/bootstrap/init.js | diff - <(echo '#!/usr/bin/env node') || {
+              echo "::error::dist/bootstrap/init.js shebang missing"
+              exit 1
+            }
+          fi
+
+      - name: No any in public API surfaces (per ADR-006 + Biome)
+        run: |
+          if [ -f scripts/check-public-any.mjs ]; then
+            node scripts/check-public-any.mjs
+          else
+            echo "::notice::scripts/check-public-any.mjs not yet authored (T3.4); skipping"
+          fi
+
+      - name: Two-allowlist process.exit() enforcement (per ADR-006)
+        run: |
+          if [ -f scripts/check-process-exit.mjs ]; then
+            node scripts/check-process-exit.mjs
+          else
+            echo "::notice::scripts/check-process-exit.mjs not yet authored (T3.8); skipping"
+          fi
+
+      - name: Cross-module contract integration harness (per E2-S1)
+        run: |
+          if [ -f tests/test-public-surface.test.ts ] || [ -f tests/test-public-surface.test.js ]; then
+            npx vitest run tests/test-public-surface.test
+          else
+            echo "::notice::Cross-module contract harness not yet authored (T3.1); skipping"
+          fi
+
+      - name: Vitest full suite + coverage
+        run: npx vitest run --coverage
+
+      - name: Coverage ratchet (per E1-S4)
+        run: |
+          if [ -f scripts/check-coverage-ratchet.mjs ]; then
+            node scripts/check-coverage-ratchet.mjs
+          else
+            echo "::notice::scripts/check-coverage-ratchet.mjs not yet authored (T2.2); skipping"
+          fi

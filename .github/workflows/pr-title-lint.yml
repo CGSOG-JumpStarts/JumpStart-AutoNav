@@ -1,0 +1,33 @@
+name: PR Title Lint
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  pr-title:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Validate title against conventional-commits vocabulary
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          PATTERN='^(feat|fix-drift|fix-logic|fix|chore|docs|test|build|ci|refactor|perf|BREAKING CHANGE)(\([a-z0-9-]+\))?(!)?: .{3,}$'
+          MERGE_PATTERN='^Merge (branch|pull request|tag) '
+
+          if echo "$PR_TITLE" | grep -qE "$PATTERN"; then
+            echo "PR title matches conventional-commits vocabulary"
+            exit 0
+          fi
+
+          if echo "$PR_TITLE" | grep -qE "$MERGE_PATTERN"; then
+            echo "PR title is a merge commit (allowlist)"
+            exit 0
+          fi
+
+          echo "::error::PR title does not match conventional-commits vocabulary."
+          echo "::error::Expected: <type>[(scope)][!]: <description>"
+          echo "::error::Valid types: feat, fix, fix-drift, fix-logic, chore, docs, test, build, ci, refactor, perf"
+          exit 1

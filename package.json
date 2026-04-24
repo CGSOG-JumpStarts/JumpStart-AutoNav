@@ -52,6 +52,15 @@
     "emulate:mock": "node bin/headless-runner.js --mock",
     "emulate:architect": "node bin/headless-runner.js --agent architect --persona compliant-user",
     "emulate:full": "node bin/headless-runner.js --agent challenger,analyst,pm,architect",
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "check:public-any": "node scripts/check-public-any.mjs",
+    "check:process-exit": "node scripts/check-process-exit.mjs",
+    "check:coverage-ratchet": "node scripts/check-coverage-ratchet.mjs",
+    "verify-baseline": "node scripts/verify-baseline.mjs",
     "prepublishOnly": "node bin/cli.js --help"
   },
   "dependencies": {
@@ -59,9 +68,14 @@
     "dotenv": "^17.3.1",
     "openai": "^6.23.0",
     "prompts": "^2.4.2",
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.13",
+    "@types/node": "^24.0.0",
+    "json-schema-to-zod": "^2.6.0",
+    "tsdown": "0.21.10",
+    "typescript": "^5.6.0",
     "vitest": "^3.2.4"
   },
   "engines": {

@@ -1,0 +1,92 @@
+# Dependabot configuration for jumpstart-mode TypeScript rewrite.
+#
+# Splits "version-updates" (weekly, grouped, low priority) from
+# "security-updates" (immediate, per-advisory, high priority with auto-merge
+# on green CI per ADR-008's 48-hour CVE SLA).
+#
+# @see specs/decisions/adr-008-npm-publish-rights-semver-cve.md
+# @see specs/implementation-plan.md T1.5
+
+version: 2
+updates:
+  # Root npm package — runtime + dev dependencies.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    versioning-strategy: "increase"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    groups:
+      # Type definitions — bundle together.
+      types:
+        patterns:
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Build/lint tooling.
+      tooling:
+        patterns:
+          - "@biomejs/biome"
+          - "tsdown"
+          - "typescript"
+        update-types:
+          - "minor"
+          - "patch"
+      # Test stack.
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Production runtime deps — keep separate to avoid coupling unrelated bumps.
+      runtime:
+        patterns:
+          - "chalk"
+          - "dotenv"
+          - "openai"
+          - "prompts"
+          - "yaml"
+          - "zod"
+          - "json-schema-to-zod"
+          - "commander"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docs site — separate dependency tree, separate update cadence.
+  - package-ecosystem: "npm"
+    directory: "/docs_site"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
+    versioning-strategy: "increase"
+    commit-message:
+      prefix: "chore(docs)"
+    labels:
+      - "dependencies"
+      - "docs-site"
+
+  # GitHub Actions — pin via SHA in workflows is the long-term plan; for now,
+  # version-tag updates are weekly to stay current.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
