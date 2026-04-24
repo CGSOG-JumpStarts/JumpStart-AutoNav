@@ -5,7 +5,7 @@
 > **Status:** Approved
 > **Created:** 2026-04-24
 > **Approval date:** 2026-04-24
-> **Approved by:** Samuel
+> **Approved by:** Samuel Combey
 
 ---
 
@@ -433,6 +433,6 @@ See the insights document for complete observation rationale, ambiguities encoun
 - [x] Code patterns and conventions have been documented
 - [x] The human has reviewed and approved this document
 
-**Approved by:** Samuel
+**Approved by:** Samuel Combey
 **Approval date:** 2026-04-24
 **Status:** Approved
