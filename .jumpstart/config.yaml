@@ -145,7 +145,7 @@ workflow:
   allow_phase_skip: false               # If true, allows jumping to a later phase
   auto_handoff: true                    # Automatically proceed to next phase after approval
   archive_on_restart: true               # Archive existing artifacts before regenerating (rename with date suffix)
-  current_phase: 2                      # Tracks active phase (0-4), managed by framework
+  current_phase: 3                      # Tracks active phase (0-4), managed by framework
   qa_log: true                          # Log every agent question and human response to specs/qa-log.md
                                         #   Creates an audit trail of all decisions across phases
                                         #   Agents append entries using the template in .jumpstart/templates/qa-log.md

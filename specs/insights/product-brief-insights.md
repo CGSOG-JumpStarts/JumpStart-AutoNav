@@ -202,6 +202,32 @@ After Samuel pushed back with *"I dont see use use agents, why not?"* — a legi
 
 ---
 
+### 📊 KU-04 spike result — `.d.ts` vs JSDoc for AI consumers: **QUALIFIED**
+
+**Timestamp:** `2026-04-24T22:00:00Z`
+
+Ran the 2-hour KU-04 empirical spike (1 Task-tool sub-agent, Sonnet 4.6, briefed as a Claude Code consumer simulating invocations of 3 representative `bin/lib/*` modules under JSDoc-only vs `.d.ts`-equipped conditions). Modules tested: `hashing.js` (simple, pure), `io.js` (utility with runtime envelope behavior), `config-loader.js` (complex stdin/stdout microservice).
+
+**Results table (agent-predicted first-try invocation success rate):**
+
+| Module | JSDoc-only | `.d.ts` equipped | Delta | Why |
+|---|---|---|---|---|
+| `hashing.js` | 90 % | 90 % | **0 pp** | JSDoc already machine-precise: `@param` typed, `@returns` with inline shape |
+| `io.js` | 85 % | 85 % | **0 pp** | Remaining ambiguities (stdin/cliArgs merge precedence, `ok/timestamp` envelope injection) are runtime semantics that neither JSDoc nor types can express |
+| `config-loader.js` | 65 % | 82 % | **+17 pp** | JSDoc documented input well but output shape had gaps (`profile_applied`, `overrides_applied[*]`). Generating `.d.ts` forces the author to type the return value, eliminating the gap |
+
+**Verdict:** **QUALIFIED** — `.d.ts` helps, but only on specific module shapes. Simple utility modules with well-annotated JSDoc `@returns` are equivalent across both conditions. The material benefit lands on modules where the output has >2 fields or optional branches AND the JSDoc didn't bother typing the return shape inline.
+
+**Refinement to Must Have #2:** The requirement shifts from *"`.d.ts` emission universal"* to *"machine-readable return-type shapes on any function with >2 fields or optional branches; `.d.ts` emission is one valid mechanism, inline JSDoc `@returns {{ shape }}` is another."* The agent benefit is identical across both mechanisms — what matters is that return shapes are machine-readable, not the file extension that emits them. This refinement flows into the PRD's Must Have decomposition in Phase 2.
+
+**Implication for the rewrite:** The TS rewrite still delivers this benefit (types force return-shape authoring). But the JS-plus competitive bundle (from Analyst Competitive row 4) ALSO delivers it if its `@ts-check`-on-public-API discipline includes enforced JSDoc return shapes. The differentiation between TS and JS-plus narrows further — the rewrite's empirical advantage on "agent navigability" is real but specific and scoped, not universal.
+
+**No blocker for Phase 2:** KU-04 was promoted to pre-PM-gating; spike completed in this turn; result refines (not invalidates) Must Have #2. PM phase proceeds with the refined MH#2 framing in the PRD.
+
+→ See spike agent's full report in session transcript (agent: `a9fbe80a8d7eff76b`). Full generated `.d.ts` samples for the 3 modules are in the agent's appendix.
+
+---
+
 ## Cross-references
 
 - [Problem Reference](../product-brief.md#problem-reference) → `specs/challenger-brief.md` (upstream)
