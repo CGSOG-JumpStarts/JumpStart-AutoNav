@@ -9,7 +9,7 @@
  * @see specs/architecture.md NFR-D02
  */
 
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 
 const DIST = 'dist';
@@ -51,12 +51,12 @@ if (scanned === 0) {
 }
 
 if (violations.length === 0) {
-  console.log('[check-public-any] OK: ' + scanned + ' .d.ts files scanned; no bare any in exports.');
+  console.log(`[check-public-any] OK: ${scanned} .d.ts files scanned; no bare any in exports.`);
   process.exit(0);
 }
 
 console.error('[check-public-any] FAIL: bare `any` in exported declaration.');
 for (const v of violations) {
-  console.error('  ' + v.file + ':' + v.line + '  ' + v.snippet);
+  console.error(`  ${v.file}:${v.line}  ${v.snippet}`);
 }
 process.exit(1);

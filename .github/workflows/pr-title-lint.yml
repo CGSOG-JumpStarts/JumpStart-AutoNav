@@ -14,8 +14,19 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          PATTERN='^(feat|fix-drift|fix-logic|fix|chore|docs|test|build|ci|refactor|perf|BREAKING CHANGE)(\([a-z0-9-]+\))?(!)?: .{3,}$'
+          # Accept conventional-commits prefixes. Squash-merge titles get the
+          # GitHub auto-suffix " (#NNN)" — the trailing-text glob `.{3,}` already
+          # tolerates it, so no separate allowance is needed.
+          PATTERN='^(feat|fix-drift|fix-logic|fix|chore|docs|test|build|ci|refactor|perf|revert|BREAKING CHANGE)(\([a-z0-9-]+\))?(!)?: .{3,}$'
+
+          # Direct merge commits — allow but discourage (squash should be default).
           MERGE_PATTERN='^Merge (branch|pull request|tag) '
+
+          # GitHub's "Revert" button generates titles like:
+          #     Revert "feat(scope): original message"
+          # …which doesn't match the conventional-commits regex above. We allow
+          # this format explicitly so revert PRs aren't blocked from CI.
+          REVERT_PATTERN='^Revert "[^"]+"( \(#[0-9]+\))?$'
 
           if echo "$PR_TITLE" | grep -qE "$PATTERN"; then
             echo "PR title matches conventional-commits vocabulary"
@@ -27,7 +38,14 @@ jobs:
             exit 0
           fi
 
+          if echo "$PR_TITLE" | grep -qE "$REVERT_PATTERN"; then
+            echo "PR title is a GitHub auto-generated revert (allowlist)"
+            exit 0
+          fi
+
           echo "::error::PR title does not match conventional-commits vocabulary."
           echo "::error::Expected: <type>[(scope)][!]: <description>"
-          echo "::error::Valid types: feat, fix, fix-drift, fix-logic, chore, docs, test, build, ci, refactor, perf"
+          echo "::error::Valid types: feat, fix, fix-drift, fix-logic, chore, docs, test, build, ci, refactor, perf, revert"
+          echo "::error::Squash-merge auto-suffix ' (#NNN)' is fine; the trailing-text glob already accepts it."
+          echo "::error::GitHub-generated 'Revert \"...\"' titles are also accepted."
           exit 1

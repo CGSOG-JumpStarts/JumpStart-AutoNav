@@ -45,10 +45,5 @@
     "tsdown.config.ts",
     "vitest.config.js"
   ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "docs_site",
-    "tests/e2e/.tmp"
-  ]
+  "exclude": ["node_modules", "dist", "docs_site", "tests/e2e/.tmp"]
 }

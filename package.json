@@ -60,6 +60,7 @@
     "check:public-any": "node scripts/check-public-any.mjs",
     "check:process-exit": "node scripts/check-process-exit.mjs",
     "check:coverage-ratchet": "node scripts/check-coverage-ratchet.mjs",
+    "check:dist-exports": "node scripts/check-dist-exports.mjs",
     "verify-baseline": "node scripts/verify-baseline.mjs",
     "prepublishOnly": "node bin/cli.js --help"
   },
@@ -73,6 +74,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.13",
     "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "^3.2.4",
     "json-schema-to-zod": "^2.6.0",
     "tsdown": "0.21.10",
     "typescript": "^5.6.0",

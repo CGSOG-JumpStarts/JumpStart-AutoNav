@@ -7,13 +7,20 @@
   },
   "files": {
     "includes": [
-      "**",
-      "!node_modules/**",
-      "!dist/**",
-      "!docs_site/**",
-      "!tests/e2e/.tmp/**",
-      "!tests/e2e/reports/**",
-      "!tests/golden-masters/**",
+      "bin/lib-ts/**/*.ts",
+      "src/**/*.ts",
+      "scripts/**/*.mjs",
+      "tests/**/*.test.ts",
+      "tsdown.config.ts",
+      "biome.json",
+      "tsconfig.json",
+      "package.json",
+      "!node_modules",
+      "!dist",
+      "!docs_site",
+      "!tests/e2e/.tmp",
+      "!tests/e2e/reports",
+      "!tests/golden-masters",
       "!*.tgz"
     ]
   },
@@ -37,7 +44,7 @@
       "recommended": true,
       "suspicious": {
         "noExplicitAny": "error",
-        "noConsoleLog": "off",
+        "noConsole": "off",
         "noEmptyBlockStatements": "warn"
       },
       "style": {

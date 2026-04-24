@@ -11,15 +11,22 @@
  * @see specs/implementation-plan.md T2.1
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { beforeAll, describe, expect, it } from 'vitest';
 
-const repoRoot = path.resolve(__dirname, '..');
+// We resolve paths from `process.cwd()` rather than `import.meta.url` because
+// the test file is type-checked under `module: NodeNext` without a
+// `"type": "module"` flip in package.json — so the compiler classifies it
+// as CommonJS and rejects `import.meta` (TS1470). vitest always launches
+// from the repo root, so `process.cwd()` is a sound substitute. When M9's
+// ESM flip lands (package.json `"type": "module"`), this can be replaced
+// with `import.meta.dirname`.
+const repoRoot = process.cwd();
 const distDir = path.join(repoRoot, 'dist');
 
-function exists(rel) {
+function exists(rel: string): boolean {
   return fs.existsSync(path.join(distDir, rel));
 }
 

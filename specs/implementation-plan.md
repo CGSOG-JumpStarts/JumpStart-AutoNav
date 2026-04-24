@@ -412,7 +412,11 @@ sha256: null
 
 | Date | Task ID | Deviation | Rationale | Approved by |
 |------|---------|-----------|-----------|-------------|
-| | | | | |
+| 2026-04-24 | T1.4 | Vitest pinned at `^3.2.4` (latest 3.x) instead of provisional `^4.0.0` mention. | Vitest 4.0 was not released as of M0 build (latest stable: 3.2.4). 3.x already provides the `globals`, `coverage.provider: 'v8'`, and `coverage.reporter: ['json-summary']` semantics the ratchet relies on. Re-evaluate at M9 (2.0 cutover) and bump to 4.x if released and stable. No behavior change vs. plan's intent. | Samuel Combey |
+| 2026-04-24 | T2.1 | tsdown `target` set to `node22` rather than the spec-default `node24`. | Strangler phase still ships under the legacy `engines: ">=14"` floor for 1.x. Building for node22 (which is also Active LTS until 2027-04) is the broadest-reach setting that still gives modern syntax. M9 retargets to `node24` simultaneously with the engines field bump. | Samuel Combey |
+| 2026-04-24 | T2.2 | `@vitest/coverage-v8` added to devDependencies post-hoc (Pit Crew finding); was implicit in the original ratchet wiring. | Coverage ratchet script presumes `coverage/coverage-summary.json` exists, which requires the v8 provider plugin. The plan's T2.2 row didn't enumerate this as a separate package; we added it during sub-commit-2 remediation. | Samuel Combey |
+| 2026-04-24 | T2.1 / Pit Crew | New gate `scripts/check-dist-exports.mjs` added (not in original plan). | QA Pit Crew's killer missing-gate finding: tsdown could silently drop a symbol or strip a shebang and downstream consumers wouldn't know until runtime. Wired into `verify-baseline.mjs` and runs after every build. Addition is additive — no plan tasks rescheduled. | Samuel Combey |
+| 2026-04-24 | T1.2 / Pit Crew | `biome.json` `files.includes` narrowed from `**` to TS-only paths (bin/lib-ts/, src/, scripts/, tests/*.test.ts, configs). | The strict `--error-on-warnings` gate in `verify-baseline.mjs` triggered hundreds of legacy-JS lint warnings that ADR-005's strangler-fig already excludes from the rewrite scope. Narrowing the includes preserves the strict gate without dragging legacy JS into M0. Legacy `bin/lib/*.js` quality is (and always has been) gated by the existing test suite. | Samuel Combey |
 
 ---
 

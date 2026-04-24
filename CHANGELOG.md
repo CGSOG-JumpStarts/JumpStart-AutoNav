@@ -23,7 +23,18 @@ In progress. The TypeScript rewrite's M0 milestone: tooling foundation, no behav
 - `yaml` runtime dep bumped from `^2.8.1` to `^2.8.3` (CVE-2026-33532 patched).
 
 ### Engineering trail
-This release is the first commit set produced by the **Phase 4 / Developer** persona executing `specs/implementation-plan.md`. M0 establishes the TypeScript toolchain without changing any user-visible CLI behavior. Test ratchet preserved: `npm test` reports 84 files / 1933 assertions green (+1 file, +3 assertions for the new smoke test).
+This release is the first commit set produced by the **Phase 4 / Developer** persona executing `specs/implementation-plan.md`. M0 establishes the TypeScript toolchain without changing any user-visible CLI behavior. Test ratchet preserved: `npm test` reports **85 files / 1937 assertions** green (+2 files, +7 assertions: 3 from `test-paths-alias-smoke.test.ts` + 4 from `test-build-smoke.test.ts`).
+
+### Pit Crew remediation (sub-commit 2)
+After the first M0 sub-commit (b9f1bb7) the Pit Crew (Reviewer + QA + Adversary) ran against the foundation and surfaced eight false-green claims. This sub-commit closes them:
+- `biome.json`: invalid rule key `noConsoleLog` → corrected to `noConsole`. `useBiomeIgnoreFolder` warning resolved by simplifying folder-ignore syntax. `files.includes` narrowed to TS-only sources so legacy `bin/lib/*.js` isn't blocked by the new strict `--error-on-warnings` gate.
+- `tests/test-build-smoke.test.ts`: TS1470 (`import.meta` not allowed in CJS-compiled output) fixed by resolving paths from `process.cwd()` until M9's ESM flip; missing parameter type annotation added.
+- `tests/test-paths-alias-smoke.test.ts`: was importing via relative path while claiming to test the `@lib/*` alias. Now imports `from '@lib/_smoke'`. Vitest's `resolve.alias` mirrors `tsconfig.paths` so the alias is exercised at runtime AND typecheck.
+- `scripts/check-process-exit.mjs`: `ROOTS` now scans `bin/lib-ts/` (strangler ports) + `src/` (2.0 layout). `dist/` removed — generated, gitignored, and would create a circular gate. Match semantics changed from `endsWith` (smuggleable) to `path.normalize` exact-match `Set` lookup.
+- `.github/workflows/pr-title-lint.yml`: `revert` type added; GitHub auto-generated `Revert "..."` titles allowlisted.
+- `tests/coverage-baseline.json`: committed (164 lines). Ratchet now active. `@vitest/coverage-v8@^3.2.4` added; `vitest.config.js` adds `json-summary` reporter.
+- `scripts/verify-baseline.mjs`: now executed; all 6 gates report PASS. Output: `.jumpstart/state/baseline-verification.json`.
+- `scripts/check-dist-exports.mjs`: new build-output integrity gate (QA's missing-gate finding) — verifies every entry in `tsdown.config.ts` produces both `.mjs` and `.d.mts` and that the d.ts mentions every exported symbol in the source.
 
 ---
 

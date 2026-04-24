@@ -29,7 +29,12 @@ function run(name, cmd, args, opts = {}) {
       stdio: opts.captureStderr ? ['ignore', 'pipe', 'pipe'] : 'pipe',
       encoding: 'utf8',
     });
-    checks.push({ name, status: 'PASS', durationMs: Date.now() - start, output: stdout.slice(-500) });
+    checks.push({
+      name,
+      status: 'PASS',
+      durationMs: Date.now() - start,
+      output: stdout.slice(-500),
+    });
     return true;
   } catch (err) {
     const output = (err.stdout || '') + (err.stderr || '');
@@ -50,6 +55,10 @@ run('vitest-full-suite', 'npx', ['vitest', 'run']);
 run('tsc-noemit', 'npx', ['tsc', '--noEmit']);
 run('biome-check', 'npx', ['biome', 'check', '--error-on-warnings', '.']);
 run('tsdown-build', 'npx', ['tsdown']);
+// dist-exports must run AFTER tsdown so dist/ is fresh.
+run('dist-exports', 'node', ['scripts/check-dist-exports.mjs']);
+run('check-public-any', 'node', ['scripts/check-public-any.mjs']);
+run('check-process-exit', 'node', ['scripts/check-process-exit.mjs']);
 if (existsSync('bin/holodeck.js')) {
   run('holodeck-baseline', 'node', ['bin/holodeck.js', '--scenario', 'baseline']);
 }
@@ -68,10 +77,14 @@ const report = {
 writeFileSync('.jumpstart/state/baseline-verification.json', JSON.stringify(report, null, 2));
 
 console.log('');
-console.log('[verify-baseline] ' + report.overall + ' — ' + report.passed + '/' + report.total + ' checks passed.');
+console.log(
+  `[verify-baseline] ${report.overall} — ${report.passed}/${report.total} checks passed.`
+);
 for (const c of checks) {
   const tag = c.status === 'PASS' ? 'OK' : 'FAIL';
-  console.log('  [' + tag + '] ' + c.name + ' (' + c.durationMs + 'ms)' + (c.status === 'FAIL' ? ' exit=' + c.exitCode : ''));
+  console.log(
+    `  [${tag}] ${c.name} (${c.durationMs}ms)${c.status === 'FAIL' ? ` exit=${c.exitCode}` : ''}`
+  );
 }
 console.log('');
 console.log('Report written: .jumpstart/state/baseline-verification.json');
