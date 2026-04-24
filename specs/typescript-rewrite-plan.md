@@ -19,7 +19,7 @@ context7_status: Library versions below were web-verified (Context7 MCP was unre
 - **Strategy:** Strangler-fig inside the same repo and package. No monorepo, no dual-publish.
 - **Cadence:** Ship 1.2, 1.3, 1.4… every 2–4 weeks with zero behavior change. Cut `2.0.0` only at the end to flip `engines.node`, drop CJS fallbacks, and publish `dist/` as the binary source.
 - **Stack:** TypeScript 5.6+ strict · ESM-only (post-2.0) · **citty** CLI · **zod v4** with `toJSONSchema()` → regenerates `.jumpstart/schemas/*.json` · **tsdown** build · **@clack/prompts** · **picocolors** · **yaml** kept · **openai** SDK kept (LiteLLM proxy) · **vitest** kept · **Biome** for lint/format · Node `--env-file` replaces `dotenv`.
-- **Execution model:** Each phase is driven by a **team of specialist agents working in parallel** — the same pattern that produced this plan. Humans approve team composition, review synthesized output, break ties between disagreeing agents, and gate phase transitions. See §2.5 for the per-phase agent composition.
+- **Execution model:** **Jumpstart's own native agents drive** (Scout, Challenger, Analyst, PM, Architect, Developer, Reviewer, Security, QA, Performance, DevOps, Refactor, Tech Writer, etc.) via their native slash commands. `/jumpstart.pitcrew` handles parallel multi-agent roundtables (the framework's native answer to multi-agent teams). External Claude Code sub-agents are retained **only for 4 legitimate gaps**: TS style review, Context7 docs research, state-file schema migrations, agent-native critique. See §2.5.
 - **Hard rules:** (1) port PRs change zero behavior; (2) the 90 existing `.test.js` files stay untouched through the port and act as the ratchet; (3) slash-command contract file (`/jumpstart.scout` etc.) is a static test, not a convention; (4) tsconfig `paths` routes `require('../bin/lib/X')` to the TS port when present, silently falls back to JS.
 - **Realistic timeline:** ~6.5 months with one primary engineer + reviewer driving the agent teams. Floor ~5 months with two. Non-compressible because the 5.3K-line dispatcher serializes on everything else and the 2.0 RC soak is required.
 
@@ -68,70 +68,107 @@ The 5,359-line `bin/cli.js` is **L7** — ported last so its types flow from ful
 
 ---
 
-## 2.5 Execution Model — Agent Team Driven
+## 2.5 Execution Model — Jumpstart-Native Agents Drive, External Only for Gaps
 
-This rewrite is **executed** by specialist agent teams, not a single agent and not a single human. The planning phase itself used a 5-agent parallel team (`feature-dev:code-explorer`, `feature-dev:code-architect`, `compound-engineering:research:framework-docs-researcher`, `pr-review-toolkit:pr-test-analyzer`, `compound-engineering:review:architecture-strategist`). Execution continues that pattern.
+This rewrite is executed **primarily by jumpstart's own native agents** — the 23 persona files in `.jumpstart/agents/*.md` loaded via slash commands. The framework covers virtually every rewrite task natively. External Claude Code sub-agents (from `compound-engineering`, `feature-dev`, `pr-review-toolkit` plugins) are retained **only for narrow legitimate gaps**.
 
-Dogfooding the rewrite through agent teams is the credibility test for the framework itself — if we can't rewrite `jumpstart-mode` using agent teams, the framework's core thesis is in doubt.
+Dogfooding the rewrite through jumpstart's own agents is the credibility test for the framework itself: if we can't rewrite `jumpstart-mode` using `jumpstart-mode`, the framework's core thesis is in doubt.
 
-### Agent composition per phase type
+### Two distinct agent mechanisms
 
-| Phase type | Primary agents (parallel) | What each contributes |
+| | Jumpstart native agents | Task-tool external sub-agents |
 |---|---|---|
-| **Research & decisions** | `framework-docs-researcher` (Context7 mandatory) · `best-practices-researcher` · `learnings-researcher` | Citation-backed memos; independent searches prevent groupthink |
-| **Module porting** | `feature-dev:code-explorer` (maps JS call graph) · `feature-dev:code-architect` (designs TS interface) · `feature-dev:code-reviewer` (quality-gates the port) | Explorer, designer, reviewer — three natural roles |
-| **Test migration** | `pr-review-toolkit:pr-test-analyzer` · `pr-review-toolkit:silent-failure-hunter` · `compound-engineering:review:kieran-typescript-reviewer` | Each catches a distinct class of regression |
-| **CLI / dispatcher ports** | `feature-dev:code-architect` · `compound-engineering:review:agent-native-reviewer` · `compound-engineering:review:dhh-rails-reviewer` (applied as "clarity over cleverness") | Agent-parity + design purity |
-| **Risk assessment (phase gates)** | `compound-engineering:review:architecture-strategist` · `compound-engineering:review:security-sentinel` · `compound-engineering:review:data-integrity-guardian` · `compound-engineering:review:deployment-verification-agent` | Distinct risk lenses per gate |
-| **Marketplace / state migrations** | `compound-engineering:review:data-migration-expert` · `compound-engineering:review:schema-drift-detector` · `compound-engineering:review:data-integrity-guardian` | High-risk state-file changes reviewed by migration specialists |
+| Invocation | Slash commands (`/jumpstart.scout`, `/jumpstart.architect`, `/jumpstart.pitcrew`) | Claude Code Agent tool |
+| Mode | Persona-switching in the primary session; roundtable-parallel via Facilitator | Independent parallel processes |
+| Authored by | This framework | External Claude Code plugins |
+| Role in this rewrite | **Primary driver** | **Gap filler only** |
 
-### Human role per phase
+### Outer workflow — jumpstart's own lifecycle drives the rewrite
 
-- **Approve agent team composition** — which agents, what prompts, what outputs
-- **Review synthesis, not raw work** — agents produce full reports; human reads the synthesis
-- **Break ties between disagreeing agents** — the planning phase surfaced 7 disagreements that required human adjudication (see Appendix A). Expect similar volume per phase
-- **Final go/no-go on phase gates** — humans sign off, not agents
+The rewrite is itself a brownfield project and follows the canonical jumpstart workflow:
 
-### Cadence (per phase)
+1. `/jumpstart.scout` → `specs/codebase-context.md` (canonical inventory — supersedes §1 here)
+2. `/jumpstart.challenge [rewrite JS → TS]` → `specs/challenger-brief.md` (genuinely stress-tests the rewrite idea)
+3. `/jumpstart.analyze` → `specs/product-brief.md` (why TS, for whom, success criteria)
+4. `/jumpstart.plan` → `specs/prd.md` (phased requirements)
+5. `/jumpstart.architect` → `specs/architecture.md` + `specs/implementation-plan.md` + `specs/decisions/*.md` (target arch, 10-phase plan, ADRs)
+6. `/jumpstart.build` → per-phase execution; our Phases 0–9 run inside this step
 
-1. **Agent-driven planning pass** — 3–5 agents in parallel produce the per-phase plan (module list, migration order, interface designs, test strategy)
-2. **Agent-driven execution pass** — 2–4 agents in parallel do the port (one explorer, one builder, one reviewer, optionally one security/data reviewer)
-3. **Human review** — synthesize, tie-break, approve or iterate
-4. **Merge** — only after human approval; CI gates (tests green, coverage ratchet clean, holodeck baseline PASS) are mandatory
+**This document (`specs/typescript-rewrite-plan.md`) is a synthesis** that compresses steps 1–5 into one doc for quick reference. The native workflow produces each as a separate canonical artifact. Where this synthesis disagrees with a canonical artifact, the canonical artifact wins (per the "Spec-First Power Inversion" rule in CLAUDE.md).
 
-No phase ships without human review of agent output. No port merges without CI-green + human-reviewed.
+### Parallel multi-agent roundtables — use `/jumpstart.pitcrew`
 
-### Why parallel, not sequential
+Jumpstart's native answer to parallel multi-agent collaboration is **The Facilitator** (`/jumpstart.pitcrew [topic]`). From `.jumpstart/agents/facilitator.md`:
 
-- **Blind spots stay uncovered** — Agent A plans commander; Agent C plans citty; the disagreement surfaces the tradeoff instead of one agent's default winning by default
-- **Independent verification** — A code-architect thinks designs through; a code-reviewer stress-tests them. Both should not be the same agent
-- **Cache efficiency** — parallel agents don't block each other; a 20-minute research task plus a 20-minute design task run in 20 min wall-clock, not 40
+> "bring multiple agent personas into a single conversation, enabling collaborative discussion on complex trade-offs, design decisions, and cross-cutting concerns."
 
-### Examples already documented
+Pit Crew is invoked whenever a phase gate needs multiple simultaneous viewpoints (e.g. "citty vs commander?", "security risks of the marketplace installer port?"). This replaces the 5-agent external Task-tool team that produced this plan's original §§1, 3, 4, 5, 7–9.
 
-- §1 inventory was produced by `feature-dev:code-explorer` in 306s across 52 tool uses
-- §3 target architecture was produced by `feature-dev:code-architect` in 245s across 33 tool uses
-- §4 dependency stack was produced by `framework-docs-researcher` in 268s (Context7 MCP was down; research fell back to web sources — the agent correctly flagged and cited this instead of fabricating citations)
-- §5 test strategy was produced by `pr-review-toolkit:pr-test-analyzer` in 181s
-- §7–9 phased rollout + risks + rollback were produced by `compound-engineering:review:architecture-strategist` in 125s
-- Appendix D (Baseline Verification) was produced **not** by an agent but by **live execution** — the bug hunt that happened in session. This is the exception: verification runs live code, and the transcript itself is the artifact
+### Agent mapping — native vs external
 
-### Per-phase agent rosters (summary; expanded per-phase at kickoff)
+| Rewrite task | Jumpstart native agent | External retained only if legitimate gap |
+|---|---|---|
+| Map existing codebase | **Scout** | — |
+| Stress-test decisions | **Challenger** + **Adversary** | — |
+| Product rationale | **Analyst** | — |
+| Phased requirements | **PM** | — |
+| Architecture + impl plan + ADRs | **Architect** | — |
+| Coding execution | **Developer** / **Quick Dev** | — |
+| Code review | **Reviewer** | `kieran-typescript-reviewer` for TS-specific taste (complement, not replace) |
+| Security review | **Security** (The Security Architect) | — |
+| QA / test strategy | **QA** (Quinn) | — |
+| Performance | **Performance** | — |
+| DevOps / CI | **DevOps** | — |
+| Refactoring | **Refactor** | — |
+| Tech docs | **Tech Writer** | — |
+| Diagrams | **Diagram Verifier** | — |
+| Domain research | **Researcher** | `framework-docs-researcher` for Context7 MCP calls (tool-specific) |
+| Requirements extraction | **Requirements Extractor** | — |
+| Retrospective | **Retrospective** | — |
+| Scrum ceremonies | **Scrum Master** | — |
+| Multi-agent roundtable | **Facilitator** (`/jumpstart.pitcrew`) | — |
+| UX / UI | **UX Designer** | — |
+| Maintenance / long-term | **Maintenance** | — |
 
-| Phase | Agents |
-|---|---|
-| 0 — Tooling foundation | `code-architect` · `framework-docs-researcher` · `best-practices-researcher` |
-| 1 — Leaf utilities | `code-explorer` · `code-architect` · `code-reviewer` · `kieran-typescript-reviewer` |
-| 2 — Schema & validation | `code-architect` · `data-integrity-guardian` · `kieran-typescript-reviewer` · `framework-docs-researcher` (for zod v4 Context7) |
-| 3 — Feature clusters batch 1 (LLM / state / UX) | Same as Phase 2 + `security-sentinel` (LLM secrets surface) |
-| 4 — Feature clusters batch 2 (codebase / governance / collab) | `code-explorer` · `code-architect` · `code-reviewer` · parallel ports across 3+ clusters |
-| 5 — Marketplace & installer | `data-migration-expert` · `security-sentinel` · `schema-drift-detector` · `code-reviewer` |
-| 6 — Runners (holodeck + headless) | `code-architect` · `silent-failure-hunter` · `julik-frontend-races-reviewer` (async races) · `code-reviewer` |
-| 7 — CLI dispatcher | `code-architect` · `agent-native-reviewer` · `dhh-rails-reviewer` · `kieran-typescript-reviewer` |
-| 8 — 2.0 cutover + RC soak | `architecture-strategist` · `deployment-verification-agent` · `security-sentinel` |
-| 9 — Hardening | `kieran-typescript-reviewer` · `pattern-recognition-specialist` · `code-simplicity-reviewer` |
+**Remaining external agents — the 4 legitimate gaps:**
 
-Per-phase rosters are **refined at phase kickoff** — the planning pass for each phase is itself an agent-team exercise that may adjust the roster based on what it finds.
+1. `kieran-typescript-reviewer` — language-specific style taste; jumpstart's Reviewer is language-agnostic
+2. `framework-docs-researcher` — Context7 MCP tool integration; jumpstart's Researcher could be taught this but Context7 is a specific MCP we want live-cited
+3. `data-migration-expert` — state-file schema migrations with specific mapping-validation patterns
+4. `agent-native-reviewer` — critiques agent-accessibility of features, relevant because we ship to Claude Code / Cursor / Copilot / Windsurf
+
+These are invoked only for their narrow specialty; native agents drive everything else.
+
+### Cadence (per phase, revised)
+
+1. **Pit Crew** (`/jumpstart.pitcrew [phase N topic]`) — Facilitator loads the relevant native agent personas (e.g. Architect + Security + QA + Performance) into a roundtable. Produces decision memo + action items.
+2. **Native lead agent drives execution** — e.g. Architect for design, Developer for coding, Reviewer for PR review. Sequential persona-switching in the primary session.
+3. **External specialist consulted only for gaps** — e.g. spawn Task-tool `kieran-typescript-reviewer` for a final style pass on ported TS; spawn `framework-docs-researcher` with Context7 for dep-version verification.
+4. **Human review** — synthesize, tie-break, approve or iterate.
+5. **Merge** — only after human approval; CI gates (tests green, coverage ratchet clean, holodeck baseline PASS) are mandatory.
+
+### Historical note on this document
+
+§§1, 3, 4, 5, 7–9 of this plan were originally produced by a 5-agent external Task-tool team (`feature-dev:code-explorer`, `feature-dev:code-architect`, `framework-docs-researcher`, `pr-review-toolkit:pr-test-analyzer`, `architecture-strategist`) before the native-first principle was corrected. The content is sound — each external agent has a near-exact native equivalent — but the synthesis being external-produced is the ironic error this §2.5 corrects. Going forward, per-phase planning uses `/jumpstart.pitcrew` (native); external agents appear only against the 4 documented gaps.
+
+Appendix D (Baseline Verification) was produced live, not by agents. That remains the right approach for verification: live execution, live transcript.
+
+### Per-phase agent rosters (native-first)
+
+| Phase | Native lead | Native roundtable (pitcrew) | External consultants |
+|---|---|---|---|
+| 0 — Tooling foundation | **Architect** | DevOps · QA · Reviewer | `framework-docs-researcher` (Context7 for tool versions) |
+| 1 — Leaf utilities | **Developer** | Reviewer · QA | `kieran-typescript-reviewer` |
+| 2 — Schema & validation | **Architect** → **Developer** | Security · QA · Maintenance | `framework-docs-researcher` (Zod v4) · `kieran-typescript-reviewer` |
+| 3 — Feature clusters batch 1 (LLM / state / UX) | **Developer** | Security · QA · Performance | `kieran-typescript-reviewer` |
+| 4 — Feature clusters batch 2 (codebase / governance / collab) | **Developer** | Reviewer · QA | `kieran-typescript-reviewer` |
+| 5 — Marketplace & installer | **Architect** → **Developer** | Security · Maintenance · DevOps | `data-migration-expert` |
+| 6 — Runners (holodeck + headless) | **Developer** | QA · Performance · Reviewer | `kieran-typescript-reviewer` |
+| 7 — CLI dispatcher | **Architect** → **Developer** | UX Designer · Security · Reviewer | `agent-native-reviewer` · `kieran-typescript-reviewer` |
+| 8 — 2.0 cutover + RC soak | **DevOps** | Security · QA · Maintenance | `data-migration-expert` |
+| 9 — Hardening | **Refactor** | Reviewer · Performance · Maintenance | `kieran-typescript-reviewer` |
+
+Per-phase rosters are **refined at phase kickoff via `/jumpstart.pitcrew [phase N]`**. The Facilitator loads the relevant personas and produces the detailed plan; external consultants are invoked only against the mapping table's narrow gaps.
 
 ---
 
@@ -535,6 +572,13 @@ This is not an agent-produced artifact. Agents A–E produced §§1–9 + Append
 - [ ] PR template drafted that enforces "port PRs change zero behavior"
 - [ ] Baseline git tag (`v1.1.13-baseline`) created before Phase 0 merges
 - [ ] Stakeholder communication plan for each AI-assistant integration (Claude Code, Cursor, Copilot, Windsurf)
-- [ ] Per-phase agent team roster approved (see §2.5 — refine at phase kickoff)
+- [ ] Per-phase agent team roster approved (see §2.5 — refine at phase kickoff via `/jumpstart.pitcrew`)
 - [ ] `scripts/verify-baseline.mjs` authored and passing (runs full suite + baseline holodeck + CLI help snapshots; exits non-zero on drift)
-- [ ] Baseline tagged as `v1.1.14-baseline` after the 1.1.14 preparatory commits merge
+- [x] Baseline tagged as `v1.1.14-baseline` (2026-04-24; commit `f9902e0`)
+- [ ] `.jumpstart/config.yaml` has `project.type: brownfield` (scout precondition)
+- [ ] `/jumpstart.scout` run and `specs/codebase-context.md` produced (supersedes §1 of this synthesis)
+- [ ] `/jumpstart.challenge [rewrite jumpstart-mode in TypeScript]` run and `specs/challenger-brief.md` produced (genuinely stress-tests the rewrite before Phase 0 code lands)
+- [ ] `/jumpstart.analyze` → `specs/product-brief.md`
+- [ ] `/jumpstart.plan` → `specs/prd.md`
+- [ ] `/jumpstart.architect` → `specs/architecture.md`, `specs/implementation-plan.md`, `specs/decisions/*.md`
+- [ ] `/jumpstart.pitcrew [phase 0]` run to confirm the Phase 0 roster (native Architect + DevOps + QA + Reviewer, plus external `framework-docs-researcher` for Context7 version lookups)

@@ -10,10 +10,12 @@ project:
   description: ""                       # One-line project description
   created_at: ""                        # ISO date, auto-populated
   approver: ""                          # Name or team name for phase gate approvals (set during initial setup)
-  type: null                            # greenfield | brownfield (null = not yet determined)
+  type: brownfield                      # greenfield | brownfield (null = not yet determined)
                                         #   greenfield: New project built from scratch
                                         #   brownfield: Existing codebase being extended or refactored
                                         #   Detected by CLI at install time, confirmed by Challenger at Phase 0
+                                        #   Set 2026-04-24: this is the jumpstart-mode framework being
+                                        #   rewritten from JS to TS — the definition of brownfield.
   domain: null                          # auto | healthcare | fintech | govtech | edtech | aerospace
                                         #   automotive | scientific | legaltech | insuretech | energy
                                         #   process_control | building_automation | gaming | general
