@@ -6,10 +6,10 @@
 # ============================================================================
 
 project:
-  name: ""                              # Your project name (populated by `jumpstart init`)
-  description: ""                       # One-line project description
-  created_at: ""                        # ISO date, auto-populated
-  approver: ""                          # Name or team name for phase gate approvals (set during initial setup)
+  name: "jumpstart-mode"                # Your project name (populated by `jumpstart init`)
+  description: "Spec-driven agentic coding framework — self-rewrite from JS to TS"  # One-line project description
+  created_at: "2026-04-24"              # ISO date, auto-populated
+  approver: "Samuel"                    # Name or team name for phase gate approvals (set during initial setup)
   type: brownfield                      # greenfield | brownfield (null = not yet determined)
                                         #   greenfield: New project built from scratch
                                         #   brownfield: Existing codebase being extended or refactored

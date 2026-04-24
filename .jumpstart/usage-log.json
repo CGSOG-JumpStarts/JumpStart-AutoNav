@@ -8,7 +8,10 @@
       "estimated_tokens": 2450,
       "estimated_cost_usd": 0.0049,
       "model": "copilot",
-      "metadata": { "artifact": "specs/codebase-context.md", "turns": 8 }
+      "metadata": {
+        "artifact": "specs/codebase-context.md",
+        "turns": 8
+      }
     },
     {
       "timestamp": "2026-04-01T10:40:30.000Z",
@@ -18,7 +21,10 @@
       "estimated_tokens": 3200,
       "estimated_cost_usd": 0.0064,
       "model": "copilot",
-      "metadata": { "artifact": "specs/challenger-brief.md", "turns": 12 }
+      "metadata": {
+        "artifact": "specs/challenger-brief.md",
+        "turns": 12
+      }
     },
     {
       "timestamp": "2026-04-01T11:05:30.000Z",
@@ -28,7 +34,10 @@
       "estimated_tokens": 2800,
       "estimated_cost_usd": 0.0056,
       "model": "copilot",
-      "metadata": { "artifact": "specs/product-brief.md", "turns": 10 }
+      "metadata": {
+        "artifact": "specs/product-brief.md",
+        "turns": 10
+      }
     },
     {
       "timestamp": "2026-04-01T11:35:30.000Z",
@@ -38,7 +47,10 @@
       "estimated_tokens": 3500,
       "estimated_cost_usd": 0.007,
       "model": "copilot",
-      "metadata": { "artifact": "specs/prd.md", "turns": 14 }
+      "metadata": {
+        "artifact": "specs/prd.md",
+        "turns": 14
+      }
     },
     {
       "timestamp": "2026-04-01T12:06:00.000Z",
@@ -48,7 +60,10 @@
       "estimated_tokens": 1200,
       "estimated_cost_usd": 0.0024,
       "model": "copilot",
-      "metadata": { "parent_agent": "Architect", "query": "STRIDE threat analysis" }
+      "metadata": {
+        "parent_agent": "Architect",
+        "query": "STRIDE threat analysis"
+      }
     },
     {
       "timestamp": "2026-04-01T12:12:30.000Z",
@@ -58,7 +73,13 @@
       "estimated_tokens": 5200,
       "estimated_cost_usd": 0.0104,
       "model": "copilot",
-      "metadata": { "artifacts": ["specs/architecture.md", "specs/implementation-plan.md"], "turns": 18 }
+      "metadata": {
+        "artifacts": [
+          "specs/architecture.md",
+          "specs/implementation-plan.md"
+        ],
+        "turns": 18
+      }
     },
     {
       "timestamp": "2026-04-01T13:25:00.000Z",
@@ -68,7 +89,26 @@
       "estimated_tokens": 8500,
       "estimated_cost_usd": 0.017,
       "model": "copilot",
-      "metadata": { "files_created": 12, "tests_created": 8, "turns": 25 }
+      "metadata": {
+        "files_created": 12,
+        "tests_created": 8,
+        "turns": 25
+      }
+    },
+    {
+      "timestamp": "2026-04-24T15:43:58.110Z",
+      "phase": "scout",
+      "agent": "Scout",
+      "action": "generation",
+      "estimated_tokens": 4800,
+      "estimated_cost_usd": 0.0096,
+      "model": "claude-sonnet",
+      "metadata": {
+        "artifact": "specs/codebase-context.md",
+        "approved": true,
+        "approver": "Samuel",
+        "session": "rewrite-kickoff-2026-04-24"
+      }
     }
   ],
   "total_tokens": 26850,
