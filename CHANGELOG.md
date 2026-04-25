@@ -4,9 +4,9 @@ All notable changes to `jumpstart-mode` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Phase 4 / Developer M0 (Tooling Foundation)
+## [Unreleased] — Phase 4 / Developer M0 + M1 (Tooling Foundation + Detection Infrastructure)
 
-In progress. The TypeScript rewrite's M0 milestone: tooling foundation, no behavior change to existing CLI.
+In progress. M0 establishes the TypeScript toolchain. M1 adds the cross-module contract harness and other detection-infrastructure gates that block any port from merging if it would silently break a method-call contract.
 
 ### Added
 - `tsconfig.json` with strict mode + `allowJs: true` + NodeNext module resolution + `@lib/*` path alias resolving `bin/lib-ts/*` first then `bin/lib/*` (strangler-fig pattern, see ADR-005).
@@ -24,6 +24,14 @@ In progress. The TypeScript rewrite's M0 milestone: tooling foundation, no behav
 
 ### Engineering trail
 This release is the first commit set produced by the **Phase 4 / Developer** persona executing `specs/implementation-plan.md`. M0 establishes the TypeScript toolchain without changing any user-visible CLI behavior. Test ratchet preserved: `npm test` reports **85 files / 1937 assertions** green (+2 files, +7 assertions: 3 from `test-paths-alias-smoke.test.ts` + 4 from `test-build-smoke.test.ts`).
+
+### M1 — Detection Infrastructure (T3.1 + T3.2 + T3.3 Blocker, sub-commit 3)
+- `scripts/extract-public-surface.mjs` — AST-based cross-module contract harness. TypeScript Compiler API for `.ts`, `@babel/parser` (+ `@babel/traverse`) for `.js`. Walks `bin/lib/**` + `bin/lib-ts/**` (or any explicit `--root=…`), records class declarations, `new ClassName(...)` instantiations, and `var.method(...)` call sites, then cross-references them. Reports `missing_method` drift with `file:line` + snippet. Output: `.jumpstart/metrics/drift-catches.json` (gitignored — rolled up by T3.7's metrics-cron).
+- `tests/test-public-surface.test.ts` — T3.3 acceptance gate. Asserts ZERO drift on current main (159 files / 4,741 call sites), and EXACTLY 8 incidents on the synthetic fixture, with the 8 missing-method names anchored to the v1.1.13 SimulationTracer divergence.
+- `tests/fixtures/contract-drift/simulation-tracer-vs-holodeck/` — T3.2 synthetic drift fixture. `tracer.js` declares 4 methods; `holodeck.js` calls 12. Committed file-pair (NOT a git-ref checkout, per implementation-plan T3.2 explicit requirement).
+- `verify-baseline.mjs` now includes a `contract-harness` gate that runs the extractor with `HARNESS_FAIL_ON_DRIFT=1`. Total verify-baseline gates: **10/10 PASS** on M1 close-out.
+- New devDependencies: `@babel/parser@^7.29.2`, `@babel/traverse@^7.29.0`, `@babel/types@^7.29.0`.
+- New npm script: `check:dist-exports` was added in M0 sub-commit 2; the contract harness has no public npm script (it's invoked directly via `node scripts/extract-public-surface.mjs`).
 
 ### Pit Crew remediation (sub-commit 2)
 After the first M0 sub-commit (b9f1bb7) the Pit Crew (Reviewer + QA + Adversary) ran against the foundation and surfaced eight false-green claims. This sub-commit closes them:

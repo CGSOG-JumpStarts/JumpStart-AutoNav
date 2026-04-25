@@ -48,3 +48,6 @@ specs/changelog-drafts/
 
 # Coverage ratchet candidate (review before promoting to baseline)
 tests/coverage-baseline.candidate.json
+
+# Contract-harness output (per-CI-run; rolled up by metrics-cron.yml T3.7)
+.jumpstart/metrics/drift-catches.json
