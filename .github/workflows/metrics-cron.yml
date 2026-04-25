@@ -1,0 +1,85 @@
+name: Metrics — Weekly Drift Rollup
+
+# Weekly cron generating the regression-share metric (per VC1) and a
+# rollup of contract-harness drift incidents over the trailing window.
+# Output is committed to a long-lived `metrics` branch so we don't
+# pollute main's history with high-frequency machine writes.
+#
+# @see specs/architecture.md §Drift-catches log + Regression-share metric
+# @see specs/implementation-plan.md T3.7
+
+on:
+  schedule:
+    # Mondays 06:30 UTC — runs after Dependabot's 06:00 cycle so any
+    # weekly version-bump churn is settled before metrics snapshot.
+    - cron: '30 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rollup:
+    name: Run harness + emit regression-share rollup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run contract harness on main
+        run: node scripts/extract-public-surface.mjs
+
+      - name: Aggregate rollup
+        run: node scripts/count-drift-catches.mjs
+
+      - name: Publish to metrics branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          # Use a worktree so we don't disturb the main checkout.
+          if git ls-remote --exit-code --heads origin metrics; then
+            git fetch origin metrics:metrics
+            git worktree add /tmp/metrics-branch metrics
+          else
+            git worktree add --detach /tmp/metrics-branch
+            git -C /tmp/metrics-branch checkout --orphan metrics
+            git -C /tmp/metrics-branch rm -rf . 2>/dev/null || true
+          fi
+
+          mkdir -p /tmp/metrics-branch/snapshots
+          STAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          cp .jumpstart/metrics/drift-catches.json "/tmp/metrics-branch/snapshots/drift-catches-${STAMP}.json"
+          cp .jumpstart/metrics/regression-share.json "/tmp/metrics-branch/regression-share-latest.json"
+
+          git -C /tmp/metrics-branch add .
+          if git -C /tmp/metrics-branch diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git -C /tmp/metrics-branch commit -m "metrics: weekly rollup ${STAMP}"
+          git -C /tmp/metrics-branch push origin metrics
+
+      - name: Upload snapshots as workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-rollup
+          path: |
+            .jumpstart/metrics/drift-catches.json
+            .jumpstart/metrics/regression-share.json
+          retention-days: 365

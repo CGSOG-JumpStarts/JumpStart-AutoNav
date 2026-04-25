@@ -61,6 +61,7 @@
     "check:process-exit": "node scripts/check-process-exit.mjs",
     "check:coverage-ratchet": "node scripts/check-coverage-ratchet.mjs",
     "check:dist-exports": "node scripts/check-dist-exports.mjs",
+    "check:return-shapes": "node scripts/check-return-shapes.mjs",
     "verify-baseline": "node scripts/verify-baseline.mjs",
     "prepublishOnly": "node bin/cli.js --help"
   },

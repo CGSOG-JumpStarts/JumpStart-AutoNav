@@ -60,6 +60,7 @@ run('tsdown-build', 'npx', ['tsdown']);
 run('dist-exports', 'node', ['scripts/check-dist-exports.mjs']);
 run('check-public-any', 'node', ['scripts/check-public-any.mjs']);
 run('check-process-exit', 'node', ['scripts/check-process-exit.mjs']);
+run('check-return-shapes', 'node', ['scripts/check-return-shapes.mjs']);
 // Cross-module contract harness (T3.1): drift detection. Runs default
 // scan (bin/lib + bin/lib-ts) and writes .jumpstart/metrics/drift-catches.json.
 // Failure mode: HARNESS_FAIL_ON_DRIFT=1 makes the script exit nonzero when
