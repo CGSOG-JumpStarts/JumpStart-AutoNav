@@ -4,9 +4,16 @@ All notable changes to `jumpstart-mode` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — Phase 4 / Developer M0 + M1 (Tooling Foundation + Detection Infrastructure)
+## [Unreleased] — Phase 4 / Developer M0 + M1 + M2 (Tooling + Detection + Leaf Ports)
 
-In progress. M0 establishes the TypeScript toolchain. M1 adds the cross-module contract harness and other detection-infrastructure gates that block any port from merging if it would silently break a method-call contract.
+In progress. M0 establishes the TypeScript toolchain. M1 adds the cross-module contract harness and other detection-infrastructure gates. M2 begins porting leaf utilities into TypeScript using the full 11-step per-module recipe — first port: `bin/lib-ts/io.ts`.
+
+### M2 — T4.1.1 io.ts (first leaf-utility port, sub-commit 7)
+- `bin/lib-ts/io.ts` — pure-TS port of `bin/lib/io.js` (5 exports: `readStdin`, `writeResult`, `writeError`, `wrapTool`, `parseToolArgs`). Successful-path output is byte-identical to the legacy module: `{ "ok": true, "timestamp": "...", ...result }` for results; `{ "ok": false, "timestamp": "...", "error": { code, message, ...details } }` for errors. Field ordering preserved verbatim so v0 IPC consumers parse identically.
+- **Documented behavior change** (the only one): `writeError(exit=true)` and `wrapTool(handler)` no longer call `process.exit(1)` on error. They throw `JumpstartError` instead, per ADR-006's library-body decision tree. The rethrow is opt-in: legacy `bin/lib/io.js` stays untouched, so every existing JS caller still gets the exit-based contract. A caller migrates by switching `require('./io.js')` → `import from '@lib/io'`. The eventual `runIpc()` (M5) catches typed errors and translates them to exit codes (`ValidationError` → 2, `LLMError` → 3, other `JumpstartError` → 99). Tested explicitly: `process.exit` spy must NOT be called when `wrapTool` handles a thrown error.
+- `tests/test-io.test.ts` — 16 tests across 5 describe blocks: `writeResult` envelope shape (including pretty-print + caller-field shadowing), `writeError` envelope + no-exit assertion, `readStdin` TTY short-circuit, `parseToolArgs` parity (6 cases), `wrapTool` success + error-throw + `JumpstartError` subclass preservation.
+- `tsdown.config.ts` adds `bin/lib-ts/io.ts` to `entry`. `check-dist-exports` verifies the d.mts surface; `check-public-any` confirms zero `any` in exports; `check-return-shapes` clean. Cross-module contract harness reports zero new drift.
+- All 11 verify-baseline gates **PASS**. Test count: **89 files / 2011 tests / 4.7s** (+1 file / +16 tests since M1 closeout).
 
 ### Added
 - `tsconfig.json` with strict mode + `allowJs: true` + NodeNext module resolution + `@lib/*` path alias resolving `bin/lib-ts/*` first then `bin/lib/*` (strangler-fig pattern, see ADR-005).
