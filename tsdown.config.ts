@@ -25,8 +25,8 @@ export default defineConfig({
     'bin/lib-ts/errors.ts',
     'bin/lib-ts/path-safety.ts',
     'bin/lib-ts/io.ts',
+    'bin/lib-ts/hashing.ts',
     // Future entries added per port:
-    // 'bin/lib-ts/hashing.ts',
     // 'bin/lib-ts/timestamps.ts',
     // 'src/cli/main.ts',         // Added at M8 (E3-S9 CLI dispatcher port)
     // 'src/bootstrap/init.ts',   // Added when bootstrap.js ports
