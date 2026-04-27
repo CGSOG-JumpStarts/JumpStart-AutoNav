@@ -29,6 +29,7 @@ export default defineConfig({
     'bin/lib-ts/timestamps.ts',
     'bin/lib-ts/locks.ts',
     'bin/lib-ts/diff.ts',
+    'bin/lib-ts/versioning.ts',
     // Future entries added per port:
     // 'src/cli/main.ts',         // Added at M8 (E3-S9 CLI dispatcher port)
     // 'src/bootstrap/init.ts',   // Added when bootstrap.js ports

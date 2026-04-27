@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 In progress. M0 establishes the TypeScript toolchain. M1 adds the cross-module contract harness and other detection-infrastructure gates. M2 begins porting leaf utilities into TypeScript using the full 11-step per-module recipe — first port: `bin/lib-ts/io.ts`.
 
+### M2 — T4.1.6 versioning.ts (sixth leaf port, sub-commit 12)
+- `bin/lib-ts/versioning.ts` — pure-library port of `bin/lib/versioning.js` (5 exports: `generateTag`, `getNextVersion`, `createVersionTag`, `injectVersion`, `listVersions`). Tag scheme `spec/<artifact>/vX.Y.Z` preserved verbatim. Frontmatter injection rules preserved.
+- **Documented security improvement** vs legacy: legacy interpolated user-controlled `artifactName` / `version` / `message` into a shell command string via `child_process.execSync` with backtick templates — command-injection risk. The port uses the array-args form of `child_process.execFileSync` so inputs pass to git directly without shell interpretation. Result-shape is byte-identical for legitimate inputs; malicious shell-metacharacter inputs that would have escaped the legacy quoting now pass through to git as literal strings. Test pinned by an explicit "evil tag-message preserves intent without shelling out" assertion.
+- `tests/test-versioning.test.ts` — 18 tests, with hermetic per-test `git init` in tmpdir so the suite never touches the project's own tags. Coverage: tag generation, frontmatter injection (4 branches), version-bumping (5 branches: empty, no-git, multi-tag, highest-not-most-recent, malformed-skipped), tag creation (default-message, error fallthrough, security-evil-message), tag listing (empty, no-git, structured parse).
+- New named types: `CreateTagResult`, `VersionEntry`.
+- All 11 verify-baseline gates **PASS**. Test count: **94 / 2099** (+1 file / +18 tests).
+
 ### M2 — T4.1.5 diff.ts (fifth leaf port, sub-commit 11)
 - `bin/lib-ts/diff.ts` — pure-library port of `bin/lib/diff.js` (2 exports: `unifiedDiff`, `generateDiff`). Behavior parity verified by 15 unit tests covering: `unifiedDiff` header + hunk shape, `generateDiff` create / modify / delete / aggregate branches including the modify-falls-back-to-disk path, `change.new ?? change.content` precedence, `Math.max(0, …)` net counting, and the empty-input zero-summary case.
 - New named types: `Change` discriminated union, `DiffEntry`, `DiffSummary`, `GenerateDiffResult`, `GenerateDiffInput`. The previously-untyped object returns now have full TS shapes.
