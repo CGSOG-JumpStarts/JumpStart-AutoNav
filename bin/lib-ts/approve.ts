@@ -229,7 +229,11 @@ export function setApproveTimelineHook(timeline: ApproveTimelineHook | null): vo
 
 // Helpers — duplicated from state-store.ts for parity (legacy approve.js
 // has its own copies; we preserve that duplication so behavior is identical
-// even when state-store.ts is bypassed)
+// even when state-store.ts is bypassed).
+//
+// @owner: bin/lib-ts/state-store.ts — keep loadState/saveState/
+// updateState/syncPhaseState byte-equivalent until handoff.ts ports
+// and the duplication can be eliminated. Pit Crew M4 Reviewer M11.
 
 function now(): string {
   return new Date().toISOString();

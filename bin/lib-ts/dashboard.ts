@@ -43,6 +43,16 @@ import { loadState } from './state-store.js';
 import { getTimelineSummary } from './timeline.js';
 import { summarizeUsage } from './usage.js';
 
+// Pit Crew M4 Reviewer M3 (DEFERRED to M9): bare `require()` calls
+// in the lazy sibling-loaders below assume CJS scope. Today the
+// strangler-phase tsconfig classifies .ts as CJS so `require` is the
+// module-scope global — works correctly. At the M9 ESM cutover this
+// must switch to `import { createRequire } from 'node:module';
+// const require = createRequire(import.meta.url);`. The fix is
+// trivial but TS1470 blocks `import.meta` in current CJS-classified
+// build, so it lands as part of the coordinated M9 flip. Documented
+// in Deviation Log under T4.3.3.
+
 // Sibling JS modules (handoff, next-phase, spec-tester, coverage) are
 // loaded via lazy `require()` — they remain CJS/ESM JS until subsequent
 // T4.3.x clusters port them. The dynamic `require` symbol is provided
@@ -456,8 +466,22 @@ export async function gatherDashboardData(
 
 // Rendering
 
+// Chalk shape: must support both `chalk.bold(text)` (call form) AND
+// `chalk.bold.yellow(text)` (chained form). Pit Crew M4 Reviewer H2:
+// the earlier port exposed `chalk.bold` as a non-callable record and
+// forced every section header through `chalk.bold.white(...)`. To
+// restore legacy parity (bare `chalk.bold(...)` for section headers,
+// `chalk.bold.yellow(...)` for clarifications), `bold` needs to be
+// both callable and indexable.
+type ChalkBold = ((s: string) => string) & {
+  blue: (s: string) => string;
+  white: (s: string) => string;
+  green: (s: string) => string;
+  yellow: (s: string) => string;
+};
+
 interface ChalkLike {
-  bold: { blue: (s: string) => string; white: (s: string) => string; green: (s: string) => string };
+  bold: ChalkBold;
   green: (s: string) => string;
   yellow: (s: string) => string;
   red: (s: string) => string;
@@ -477,8 +501,13 @@ function loadChalk(): ChalkLike {
     // Fallback no-op chalk so the renderer never throws on missing
     // dependency. ANSI codes are dropped and the text is returned raw.
     const passthrough = (s: string): string => s;
+    const boldFallback = passthrough as unknown as ChalkBold;
+    boldFallback.blue = passthrough;
+    boldFallback.white = passthrough;
+    boldFallback.green = passthrough;
+    boldFallback.yellow = passthrough;
     const fallback: ChalkLike = {
-      bold: { blue: passthrough, white: passthrough, green: passthrough },
+      bold: boldFallback,
       green: passthrough,
       yellow: passthrough,
       red: passthrough,
@@ -539,13 +568,13 @@ export function renderDashboardText(data: DashboardData): string {
   lines.push('');
 
   // Pipeline
-  lines.push(chalk.bold.white('  Pipeline:'));
+  lines.push(chalk.bold('  Pipeline:'));
   lines.push(`  ${renderPipeline(data.phases)}`);
   lines.push('');
 
   // Progress bar
   lines.push(
-    `${chalk.bold.white('  Progress: ')}${renderBar(data.progress.pct)}${chalk.gray(
+    `${chalk.bold('  Progress: ')}${renderBar(data.progress.pct)}${chalk.gray(
       ` ${data.progress.completed}/${data.progress.total} phases (${data.progress.pct}%)`
     )}`
   );
@@ -555,18 +584,18 @@ export function renderDashboardText(data: DashboardData): string {
   if (data.current.phase !== null && data.current.phase !== undefined) {
     const phaseInfo = data.phases.find((p) => p.phase === data.current.phase);
     lines.push(
-      `${chalk.bold.white('  Current: ')}${chalk.cyan(
+      `${chalk.bold('  Current: ')}${chalk.cyan(
         `Phase ${data.current.phase} — ${phaseInfo ? phaseInfo.name : 'Unknown'}`
       )}${data.current.agent ? chalk.gray(` (${data.current.agent})`) : ''}`
     );
   } else {
-    lines.push(`${chalk.bold.white('  Current: ')}${chalk.gray('No phase started')}`);
+    lines.push(`${chalk.bold('  Current: ')}${chalk.gray('No phase started')}`);
   }
   lines.push('');
 
   // Quality Scores
   if (data.quality.scores.length > 0) {
-    lines.push(chalk.bold.white('  Quality Scores:'));
+    lines.push(chalk.bold('  Quality Scores:'));
     for (const q of data.quality.scores) {
       const scoreColor = q.score >= 80 ? chalk.green : q.score >= 60 ? chalk.yellow : chalk.red;
       lines.push(`    Phase ${q.phase} (${q.name}): ${scoreColor(`${q.score}/100`)}`);
@@ -586,7 +615,7 @@ export function renderDashboardText(data: DashboardData): string {
           ? chalk.yellow
           : chalk.red;
     lines.push(
-      `${chalk.bold.white('  Story Coverage: ')}${covColor(`${data.coverage.story_pct}%`)}${chalk.gray(
+      `${chalk.bold('  Story Coverage: ')}${covColor(`${data.coverage.story_pct}%`)}${chalk.gray(
         ` (${data.coverage.total_stories} stories, ${data.coverage.total_tasks} tasks)`
       )}`
     );
@@ -598,7 +627,11 @@ export function renderDashboardText(data: DashboardData): string {
 
   // Open Clarifications
   if (data.clarifications.length > 0) {
-    lines.push(chalk.bold.white(`  Open Clarifications (${data.clarifications.length}):`));
+    // Pit Crew M4 Reviewer H1: legacy uses bold.yellow for the
+    // clarifications header — yellow signals "warning/attention".
+    // Earlier port used bold.white which is informationally neutral
+    // and was a visible UX regression.
+    lines.push(chalk.bold.yellow(`  Open Clarifications (${data.clarifications.length}):`));
     const shown = data.clarifications.slice(0, 5);
     for (const c of shown) {
       lines.push(chalk.yellow(`    ▸ ${c.file}:${c.line} — ${c.text}`));
@@ -612,7 +645,7 @@ export function renderDashboardText(data: DashboardData): string {
   // Usage
   if (data.usage) {
     lines.push(
-      `${chalk.bold.white('  Token Usage: ')}${chalk.gray(
+      `${chalk.bold('  Token Usage: ')}${chalk.gray(
         `${data.usage.total_tokens.toLocaleString()} tokens`
       )}${data.usage.total_cost ? chalk.gray(` ($${data.usage.total_cost.toFixed(2)})`) : ''}`
     );
@@ -622,7 +655,7 @@ export function renderDashboardText(data: DashboardData): string {
   // Timeline
   if (data.timeline && data.timeline.total_events > 0) {
     lines.push(
-      `${chalk.bold.white('  Timeline: ')}${chalk.gray(`${data.timeline.total_events} events`)}${
+      `${chalk.bold('  Timeline: ')}${chalk.gray(`${data.timeline.total_events} events`)}${
         data.timeline.duration_s ? chalk.gray(` over ${Math.round(data.timeline.duration_s)}s`) : ''
       }`
     );

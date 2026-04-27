@@ -177,11 +177,34 @@ export function getProfileDescription(profileName: string): string {
   return profile.description;
 }
 
-/** Expand dot-notation keys to a nested object. */
+/**
+ * Expand dot-notation keys to a nested object.
+ *
+ * Pit Crew M4 Adversary F2 (BLOCKER, confirmed exploit): rejects any
+ * dotted-path segment equal to `__proto__`, `constructor`, or
+ * `prototype`. Pre-fix POC:
+ *   `expandDotNotation({ '__proto__.polluted': 'PWNED' })`
+ * pollutes `Object.prototype.polluted = 'PWNED'`, leaking into every
+ * object globally. Even though `applyProfile` only consumes
+ * hardcoded settings today, `expandDotNotation` is in the public
+ * surface for any caller (including future config-merge code) to use.
+ */
+const FORBIDDEN_KEYS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype']);
+
 export function expandDotNotation(flat: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [dotPath, value] of Object.entries(flat)) {
     const keys = dotPath.split('.');
+    // Reject every segment in the dotted path. A dotPath of
+    // `__proto__.polluted` produces keys `['__proto__', 'polluted']`;
+    // we want to reject as soon as ANY segment hits the forbidden set.
+    for (const seg of keys) {
+      if (FORBIDDEN_KEYS.has(seg)) {
+        throw new Error(
+          `expandDotNotation: forbidden key segment "${seg}" in path "${dotPath}" — prototype pollution rejected (Pit Crew M4 Adv F2).`
+        );
+      }
+    }
     let current = result;
     for (let i = 0; i < keys.length - 1; i++) {
       const k = keys[i];

@@ -237,18 +237,21 @@ describe('Pit Crew M3 Reviewer H2 — redactSecrets handles Buffer / Map / Set',
     expect((out as Buffer).toString('utf8')).toContain('[REDACTED:GitHub Token]');
     expect((out as Buffer).toString('utf8')).not.toContain(FAKE_GH_TOKEN);
   });
-  it('walks Map values + keys', () => {
+  it('walks Map values + keys (projected to JSON-safe array of tuples per Pit Crew M4 F11)', () => {
     const m = new Map<string, string>([['key', FAKE_GH_TOKEN]]);
-    const out = redactSecrets(m) as Map<string, string>;
-    expect(out).toBeInstanceOf(Map);
-    expect(out.get('key')).toContain('[REDACTED:GitHub Token]');
+    const out = redactSecrets(m) as unknown as Array<[string, string]>;
+    expect(Array.isArray(out)).toBe(true);
+    // Project to plain array of [key, value] tuples — JSON-safe AND
+    // round-trips via `new Map(arr)` for in-process consumers.
+    const reconstructed = new Map(out);
+    expect(reconstructed.get('key')).toContain('[REDACTED:GitHub Token]');
   });
-  it('walks Set members', () => {
+  it('walks Set members (projected to JSON-safe array per Pit Crew M4 F11)', () => {
     const s = new Set([FAKE_GH_TOKEN, 'safe']);
-    const out = redactSecrets(s) as Set<string>;
-    expect(out).toBeInstanceOf(Set);
-    expect(Array.from(out).some((v) => v.includes('[REDACTED:GitHub Token]'))).toBe(true);
-    expect(out.has('safe')).toBe(true);
+    const out = redactSecrets(s) as unknown as string[];
+    expect(Array.isArray(out)).toBe(true);
+    expect(out.some((v) => v.includes('[REDACTED:GitHub Token]'))).toBe(true);
+    expect(out).toContain('safe');
   });
 });
 

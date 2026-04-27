@@ -141,7 +141,12 @@ const PHASE_MAP: Record<
 };
 
 // Helpers (inlined from handoff.js — will be replaced with imports
-// when handoff.ts ports later)
+// when handoff.ts ports later).
+//
+// @owner: bin/lib/handoff.js — keep `isArtifactApproved` AND
+// `getHandoff` byte-equivalent until handoff.ts ports. A duplicate
+// copy lives in `bin/lib-ts/approve.ts` (PHASE_MAP only — `getHandoff`
+// signature differs slightly there). Pit Crew M4 Reviewer M11.
 
 function isArtifactApproved(content: string): boolean {
   if (!content) return false;
@@ -418,6 +423,13 @@ export function determineNextAction(options: NextActionOptions = {}): NextAction
 
     if (!isArtifactApproved(content)) {
       if (requireApproval) {
+        // Pit Crew M4 Reviewer H5 (intentional fix vs legacy):
+        // legacy did `currentPhase + 1` raw, which when currentPhase
+        // is the string `"2"` produces `"21"` (string concat). The
+        // TS port coerces to number first so the math is correct.
+        // Documented as a deliberate bug-fix in the Deviation Log
+        // under T4.3.2 (next-phase.ts) — downstream consumers that
+        // depended on the legacy concat behavior must update.
         const phaseNum = Number(currentPhase);
         return {
           action: 'approve',
@@ -448,7 +460,13 @@ export function determineNextAction(options: NextActionOptions = {}): NextAction
 
     const nextAgent = handoff.next_agent ?? null;
     const nextPhase = handoff.next_phase ?? null;
-    const command = nextAgent ? AGENT_COMMANDS[nextAgent] : '/jumpstart.status';
+    // Pit Crew M4 Reviewer H4: legacy returned `AGENT_COMMANDS[nextAgent]`
+    // which is `undefined` when nextAgent is null — but the legacy
+    // type contract still has `command` typed as string. Preserve
+    // legacy behavior (empty string) when nextAgent is missing rather
+    // than substituting `/jumpstart.status` (which the previous port
+    // did silently).
+    const command = nextAgent ? (AGENT_COMMANDS[nextAgent] ?? '') : '';
 
     if (focusConfig?.enabled && nextPhase !== null && !isPhaseInFocus(nextPhase, focusConfig)) {
       return {

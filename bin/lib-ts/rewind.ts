@@ -242,9 +242,17 @@ export function rewindToPhase(targetPhase: number, options: RewindOptions = {}):
     (a) => !downstreamArtifactSet.has(a)
   );
 
-  state.phase_history = (state.phase_history || []).filter(
-    (h) => !downstream.includes(Number(h.phase))
-  );
+  // Pit Crew M4 Reviewer H6: legacy filter was
+  // `!downstream.includes(h.phase)` (no Number() coercion). Earlier
+  // port coerced to Number, so a `null` phase entry became `0` and
+  // matched downstream when 0 was in the downstream array — silently
+  // dropping legacy null entries. Guard explicitly: keep entries
+  // whose phase is null/undefined, AND keep entries whose coerced
+  // phase number is NOT in downstream.
+  state.phase_history = (state.phase_history || []).filter((h) => {
+    if (h.phase === null || h.phase === undefined) return true;
+    return !downstream.includes(Number(h.phase));
+  });
 
   state.current_phase = phase;
   state.current_agent = phaseInfo.name.toLowerCase();

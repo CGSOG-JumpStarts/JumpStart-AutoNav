@@ -472,29 +472,35 @@ function redactSecretsImpl(value: unknown, seen: WeakSet<object>): unknown {
     return value.map((item) => redactSecretsImpl(item, seen));
   }
 
-  // Pit Crew M3 Reviewer H2: Buffer / Map / Set handling. ADR-012
-  // mandates redaction on every log-write path; usage.ts and
-  // timeline.ts will receive Buffer payloads from `fs.readFileSync`
-  // and Map/Set values from internal IPC plumbing. Leaving them
-  // shape-preserved-by-reference would silently leak the bytes.
+  // Pit Crew M3 Reviewer H2 + M4 Adv F11: Buffer / Map / Set handling.
+  // ADR-012 mandates redaction on every log-write path. Map/Set
+  // round-tripped as Map/Set would JSON.stringify to `{}`/`{}` (silent
+  // data loss — Pit Crew M4 Adv F11 confirmed exploit). To preserve
+  // BOTH shape AND JSON-serializability we project them to plain
+  // arrays/objects post-redaction. Buffer round-trips through utf-8.
+  //
+  // Trade-off: in-process consumers that received a Map/Set from
+  // redactSecrets pre-fix and depended on `.get`/`.has` will now
+  // receive an array. Documented as intentional behavior change in
+  // the Deviation Log under T4.3.3.
   if (Buffer.isBuffer(value)) {
-    // Round-trip through utf-8 so embedded secrets are redacted in
-    // string form, then re-emit as a Buffer for shape preservation.
     return Buffer.from(redactString(value.toString('utf8')), 'utf8');
   }
   if (value instanceof Map) {
-    const out = new Map();
+    // Project Map to an array of [key, value] tuples — JSON-safe and
+    // round-trips via `new Map(arr)` if the consumer needs a Map.
+    const out: Array<[unknown, unknown]> = [];
     for (const [k, v] of value.entries()) {
-      // Keys are typically strings/numbers but might be objects;
-      // recursively redact both sides for safety.
-      out.set(redactSecretsImpl(k, seen), redactSecretsImpl(v, seen));
+      out.push([redactSecretsImpl(k, seen), redactSecretsImpl(v, seen)]);
     }
     return out;
   }
   if (value instanceof Set) {
-    const out = new Set();
+    // Project Set to an array — JSON-safe and round-trips via
+    // `new Set(arr)`.
+    const out: unknown[] = [];
     for (const v of value) {
-      out.add(redactSecretsImpl(v, seen));
+      out.push(redactSecretsImpl(v, seen));
     }
     return out;
   }

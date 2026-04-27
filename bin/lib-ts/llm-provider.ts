@@ -184,28 +184,69 @@ export const MODEL_REGISTRY: Record<string, ModelConfig> = {
   },
 };
 
-/** ADR-011 endpoint allowlist. */
-const ALLOWED_ENDPOINT_PATTERNS: readonly RegExp[] = [
-  /^https:\/\/[^/]+(\/.*)?$/, // Any HTTPS URL
-  /^http:\/\/localhost(:\d+)?(\/.*)?$/, // http://localhost:*
-  /^http:\/\/127\.0\.0\.1(:\d+)?(\/.*)?$/, // http://127.0.0.1:*
-  /^http:\/\/\[::1\](:\d+)?(\/.*)?$/, // http://[::1]:*
-];
+/** ADR-011 localhost hostnames (case-insensitive). */
+const ALLOWED_LOCALHOST_HOSTS: ReadonlySet<string> = new Set([
+  'localhost',
+  '127.0.0.1',
+  '[::1]',
+  '::1',
+]);
 
 /**
- * Validate a LiteLLM endpoint against the ADR-011 allowlist. Throws
- * `LLMError` (exit 3) on rejection unless the
- * `JUMPSTART_ALLOW_INSECURE_LLM_URL=1` env-var override is set.
+ * Validate a LiteLLM endpoint against the ADR-011 allowlist.
  *
- * Exported for test access; library callers normally don't need it
- * (createProvider() invokes it automatically).
+ * **Pit Crew M4 Reviewer M6 + Adversary userinfo concern**: previous
+ * regex-based check accepted `https://attacker.com@trusted-proxy.local`
+ * because `[^/]+` matches anything-non-slash, including `attacker.com@`
+ * userinfo. The OpenAI SDK then resolves `attacker.com` as the host,
+ * leaking secrets. Defense: parse the URL with `new URL(...)` and
+ * inspect the components directly. Reject ANY URL with non-empty
+ * `username` or `password` (no userinfo allowed in the LiteLLM proxy
+ * URL). Reject malformed URLs by catching the `URL` constructor's
+ * `TypeError`.
+ *
+ * Allowlist:
+ *   - Any `https:` protocol with NO userinfo
+ *   - `http:` protocol if hostname is `localhost`/`127.0.0.1`/`[::1]`
+ *
+ * Throws `LLMError` (exit 3) on rejection unless
+ * `JUMPSTART_ALLOW_INSECURE_LLM_URL=1` env-var override is set.
  */
 export function validateLLMEndpoint(url: string): void {
   const override = process.env.JUMPSTART_ALLOW_INSECURE_LLM_URL === '1';
-  const matches = ALLOWED_ENDPOINT_PATTERNS.some((re) => re.test(url));
-
-  if (matches) return;
   if (override) return;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new LLMError(
+      `LLM endpoint "${url}" is not a parsable URL. Set JUMPSTART_ALLOW_INSECURE_LLM_URL=1 to override.`,
+      { url, override: false }
+    );
+  }
+
+  // Reject userinfo (Pit Crew M4 Adversary M6 confirmed-exploit).
+  if (parsed.username !== '' || parsed.password !== '') {
+    throw new LLMError(
+      `LLM endpoint "${url}" contains userinfo (username/password) which can confuse downstream HTTP clients. Embed credentials via Authorization header instead.`,
+      { url, override: false, reason: 'userinfo_in_url' }
+    );
+  }
+
+  if (parsed.protocol === 'https:') {
+    return; // Any HTTPS URL with no userinfo
+  }
+
+  if (parsed.protocol === 'http:') {
+    // Hostname comparison is case-insensitive per RFC 3986; URL.hostname
+    // is already lowercased in modern Node. The `[::1]` form needs
+    // special-casing because URL.hostname strips the brackets.
+    const host = parsed.hostname.toLowerCase();
+    if (ALLOWED_LOCALHOST_HOSTS.has(host) || ALLOWED_LOCALHOST_HOSTS.has(`[${host}]`)) {
+      return;
+    }
+  }
 
   throw new LLMError(
     `LLM endpoint "${url}" is not HTTPS and not a localhost address. This could indicate environment-variable poisoning. Set JUMPSTART_ALLOW_INSECURE_LLM_URL=1 to override (NOT recommended for production use).`,

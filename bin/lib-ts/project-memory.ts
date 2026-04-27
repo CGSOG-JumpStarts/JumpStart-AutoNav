@@ -137,15 +137,32 @@ export function defaultMemoryStore(): MemoryStore {
 
 /** Load the memory store from disk; defaults on missing/corrupt. */
 export function loadMemoryStore(memoryFile?: string): MemoryStore {
+  // Pit Crew M4 Adversary F13: validate parsed shape before returning.
+  // Soft-fall to default on any shape mismatch.
   const filePath = memoryFile || DEFAULT_MEMORY_FILE;
   if (!existsSync(filePath)) {
     return defaultMemoryStore();
   }
+  let parsed: unknown;
   try {
-    return JSON.parse(readFileSync(filePath, 'utf8')) as MemoryStore;
+    parsed = JSON.parse(readFileSync(filePath, 'utf8'));
   } catch {
     return defaultMemoryStore();
   }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return defaultMemoryStore();
+  }
+  const obj = parsed as Partial<MemoryStore>;
+  if (!Array.isArray(obj.entries)) {
+    return defaultMemoryStore();
+  }
+  const base = defaultMemoryStore();
+  return {
+    version: typeof obj.version === 'string' ? obj.version : base.version,
+    created_at: typeof obj.created_at === 'string' ? obj.created_at : base.created_at,
+    last_updated: typeof obj.last_updated === 'string' ? obj.last_updated : null,
+    entries: obj.entries,
+  };
 }
 
 /** Persist the memory store to disk. Stamps last_updated, trailing newline. */

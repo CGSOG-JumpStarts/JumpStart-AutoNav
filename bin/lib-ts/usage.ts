@@ -90,22 +90,31 @@ export function setUsageTimelineHook(timeline: TimelineHook | null): void {
 
 // Implementation
 
-/** Load the usage log from disk; returns zeroed defaults on missing/corrupt. */
+/** Load the usage log from disk; returns zeroed defaults on missing/corrupt.
+ *
+ *  Pit Crew M4 Adversary F13: validates parsed shape before returning.
+ *  A maliciously-crafted usage-log.json with non-object root would
+ *  type-confuse downstream `log.entries.push` calls. Post-fix: enforce
+ *  object root + array entries.
+ */
 export function loadUsageLog(logPath: string): UsageLog {
-  if (!existsSync(logPath)) {
-    return { entries: [], total_tokens: 0, total_cost_usd: 0 };
-  }
-
+  const empty: UsageLog = { entries: [], total_tokens: 0, total_cost_usd: 0 };
+  if (!existsSync(logPath)) return empty;
+  let parsed: unknown;
   try {
-    const data = JSON.parse(readFileSync(logPath, 'utf8')) as Partial<UsageLog>;
-    return {
-      entries: data.entries || [],
-      total_tokens: data.total_tokens || 0,
-      total_cost_usd: data.total_cost_usd || 0,
-    };
+    parsed = JSON.parse(readFileSync(logPath, 'utf8'));
   } catch {
-    return { entries: [], total_tokens: 0, total_cost_usd: 0 };
+    return empty;
   }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return empty;
+  }
+  const data = parsed as Partial<UsageLog>;
+  return {
+    entries: Array.isArray(data.entries) ? data.entries : [],
+    total_tokens: typeof data.total_tokens === 'number' ? data.total_tokens : 0,
+    total_cost_usd: typeof data.total_cost_usd === 'number' ? data.total_cost_usd : 0,
+  };
 }
 
 /**

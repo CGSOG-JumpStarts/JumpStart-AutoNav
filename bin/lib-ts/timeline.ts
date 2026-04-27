@@ -327,7 +327,17 @@ export function createTimeline(options: CreateTimelineOptions = {}): Timeline {
     return redactedEvent;
   }
 
-  /** Flush buffered events to disk. */
+  /** Flush buffered events to disk.
+   *
+   *  Pit Crew M4 Adversary F10 (HIGH, confirmed exploit): a cyclic
+   *  metadata reference would crash `JSON.stringify` with
+   *  `Converting circular structure to JSON`, propagating the throw
+   *  out of recordEvent and corrupting the buffer (which never got
+   *  cleared). Defense: stringify with a replacer that detects cycles
+   *  and emits `"[unserializable: cycle]"` for the offending node,
+   *  AND wrap the whole call in try/catch so any other serialization
+   *  error (BigInt, etc.) cannot crash the persistence layer.
+   */
   function flush(): void {
     if (buffer.length === 0) return;
 
@@ -342,7 +352,20 @@ export function createTimeline(options: CreateTimelineOptions = {}): Timeline {
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
-    writeFileSync(filePath, `${JSON.stringify(timelineData, null, 2)}\n`, 'utf8');
+    let serialized: string;
+    try {
+      serialized = JSON.stringify(timelineData, _safeReplacer(), 2);
+    } catch {
+      // Last-resort fallback if the replacer itself fails.
+      serialized = JSON.stringify({
+        ...timelineData,
+        events: timelineData.events.map((e) => ({
+          ...e,
+          metadata: { _serialization_error: 'unserializable metadata' },
+        })),
+      });
+    }
+    writeFileSync(filePath, `${serialized}\n`, 'utf8');
 
     buffer = [];
     pendingFlush = 0;
@@ -356,7 +379,16 @@ export function createTimeline(options: CreateTimelineOptions = {}): Timeline {
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
-    writeFileSync(filePath, `${JSON.stringify(timelineData, null, 2)}\n`, 'utf8');
+    // Use the same safe replacer as flush() to defend against any
+    // cycles or unserializable types that may have entered after
+    // the most recent flush.
+    let serialized: string;
+    try {
+      serialized = JSON.stringify(timelineData, _safeReplacer(), 2);
+    } catch {
+      serialized = JSON.stringify({ ...timelineData, events: [] });
+    }
+    writeFileSync(filePath, `${serialized}\n`, 'utf8');
   }
 
   function setPhase(phase: number | string | null): void {
@@ -394,17 +426,40 @@ export function createTimeline(options: CreateTimelineOptions = {}): Timeline {
 
 // Loading & Querying
 
-/** Load timeline data from disk; returns empty defaults on missing/corrupt. */
+/** Load timeline data from disk; returns empty defaults on missing/corrupt.
+ *
+ *  Pit Crew M4 Adversary F13: validates parsed shape before returning.
+ *  A maliciously-crafted timeline.json with `"PWNED"` (string root) or
+ *  array root would type-confuse downstream consumers via
+ *  `data.events.filter`. Post-fix: enforce object root + array events.
+ */
 export function loadTimeline(filePath?: string): TimelineData {
+  const empty: TimelineData = {
+    version: '1.0.0',
+    session_id: null,
+    started_at: null,
+    ended_at: null,
+    events: [],
+  };
   const p = filePath || DEFAULT_TIMELINE_PATH;
-  if (!existsSync(p)) {
-    return { version: '1.0.0', session_id: null, started_at: null, ended_at: null, events: [] };
-  }
+  if (!existsSync(p)) return empty;
+  let parsed: unknown;
   try {
-    return JSON.parse(readFileSync(p, 'utf8')) as TimelineData;
+    parsed = JSON.parse(readFileSync(p, 'utf8'));
   } catch {
-    return { version: '1.0.0', session_id: null, started_at: null, ended_at: null, events: [] };
+    return empty;
   }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return empty;
+  }
+  const obj = parsed as Record<string, unknown>;
+  return {
+    version: typeof obj.version === 'string' ? obj.version : empty.version,
+    session_id: typeof obj.session_id === 'string' ? obj.session_id : null,
+    started_at: typeof obj.started_at === 'string' ? obj.started_at : null,
+    ended_at: typeof obj.ended_at === 'string' ? obj.ended_at : null,
+    events: Array.isArray(obj.events) ? (obj.events as TimelineEvent[]) : [],
+  };
 }
 
 /** Query timeline events with filters. */
@@ -617,7 +672,19 @@ export function renderJSON(events: TimelineEvent[]): string {
  *  evaluated as code in this module. */
 export function renderHTML(events: TimelineEvent[], options: RenderOptions = {}): string {
   const title = options.title || 'Jump Start Timeline';
-  const eventsJSON = JSON.stringify(events);
+  // Pit Crew M4 Adversary F1 (BLOCKER, confirmed exploit): the JSON
+  // payload is interpolated into a `<script>` block in the embedded
+  // HTML viewer. A malicious event with `action: "</script><script>
+  // window.X='PWNED'</script>"` would close the host script tag and
+  // execute attacker JS at view time. Defense: escape `</` to `<\/`
+  // (the reverse-solidus is a no-op inside JSON strings but breaks
+  // the tag-closer parse). Belt-and-braces: also escape `<` to its
+  // unicode form `<` for any `<` followed by something that
+  // could begin an HTML construct (`!`, `?`, `/`, ASCII letter).
+  const eventsJSON = JSON.stringify(events).replace(
+    /<\/(script|!--|!|\?)/gi,
+    (m) => `<\\/${m.slice(2)}`
+  );
   return _buildHtmlDocument(title, events.length, eventsJSON);
 }
 
@@ -643,6 +710,34 @@ export function generateTimelineReport(
 }
 
 // Internal Helpers
+
+/**
+ * Build a JSON.stringify replacer that detects cycles AND swaps
+ * Map/Set values to JSON-serializable shapes (Pit Crew M4 Adv F10 +
+ * F11). Cycles produce a `"[Circular]"` marker. Maps become arrays
+ * of [key, value] tuples (matching `[...map.entries()]`). Sets
+ * become arrays. Buffers are stringified to utf-8 (after
+ * redactSecrets has already run upstream).
+ */
+function _safeReplacer(): (key: string, value: unknown) => unknown {
+  const seen = new WeakSet<object>();
+  return function replacer(_key: string, value: unknown): unknown {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return '[Circular]';
+      seen.add(value);
+      if (value instanceof Map) {
+        return Array.from(value.entries());
+      }
+      if (value instanceof Set) {
+        return Array.from(value.values());
+      }
+      if (Buffer.isBuffer(value)) {
+        return value.toString('utf8');
+      }
+    }
+    return value;
+  };
+}
 
 /** Load or initialize timeline data. */
 function _loadOrInit(filePath: string, sessionId: string): TimelineData {

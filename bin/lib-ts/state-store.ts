@@ -75,7 +75,11 @@ export interface WorkflowState {
   approved_artifacts: string[];
   phase_history: PhaseHistoryEntry[];
   last_updated: string | null;
-  resume_context: ResumeContext;
+  // Pit Crew M4 Reviewer H3: resume_context is nullable in legacy when
+  // a checkpoint with null resume_context is restored. The earlier
+  // type forced a defaultState() fallback, breaking downstream
+  // consumers that branched on `state.resume_context === null`.
+  resume_context: ResumeContext | null;
   checkpoints?: Checkpoint[];
 }
 
@@ -118,6 +122,11 @@ const DEFAULT_STATE_PATH = '.jumpstart/state/state.json';
 
 let _timelineHook: TimelineHook | null = null;
 
+// Module-level checkpoint counter (Pit Crew M4 Adv F12). Monotonic,
+// bumped each createCheckpoint call. Mod-encoded into base36 for
+// compact suffix.
+let _checkpointCounter = 0;
+
 /** Set the timeline instance for recording state events. Pass null to clear. */
 export function setTimelineHook(timeline: TimelineHook | null): void {
   _timelineHook = timeline;
@@ -151,18 +160,68 @@ function defaultState(): WorkflowState {
   };
 }
 
-/** Load state from disk; defaults on missing/corrupt. */
+/** Load state from disk; defaults on missing/corrupt.
+ *
+ *  Pit Crew M4 Adversary F13 (HIGH, confirmed exploit): legacy
+ *  `JSON.parse` cast bypassed shape validation. A maliciously-crafted
+ *  state.json with `"PWNED"` (string root) or `[1,2]` (array root)
+ *  would type-confuse downstream consumers — `state.phase_history.push(...)`
+ *  crashed with `Cannot read properties of undefined`. Post-fix:
+ *  validate the parsed root is a plain object before returning, AND
+ *  reject any nodes/edges with prototype-pollution-shaped keys.
+ *  Soft-fall to defaults on validation failure (preserves legacy
+ *  "soft-fail on corrupt" semantics).
+ */
 export function loadState(statePath?: string): WorkflowState {
   const p = statePath || DEFAULT_STATE_PATH;
   if (!existsSync(p)) {
     return defaultState();
   }
+  let parsed: unknown;
   try {
-    const content = readFileSync(p, 'utf8');
-    return JSON.parse(content) as WorkflowState;
+    parsed = JSON.parse(readFileSync(p, 'utf8'));
   } catch {
     return defaultState();
   }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return defaultState();
+  }
+  const obj = parsed as Record<string, unknown>;
+  // Reject prototype-pollution-shaped keys that may leak in via
+  // attacker-crafted state.json (Pit Crew M4 Adv F13 + companion to F2).
+  for (const k of Object.keys(obj)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+      return defaultState();
+    }
+  }
+  // Apply normalization-style defaults so missing/wrong-typed sub-fields
+  // don't crash downstream consumers.
+  const base = defaultState();
+  return {
+    ...base,
+    ...obj,
+    active_artifacts: Array.isArray(obj.active_artifacts) ? (obj.active_artifacts as string[]) : [],
+    approved_artifacts: Array.isArray(obj.approved_artifacts)
+      ? (obj.approved_artifacts as string[])
+      : [],
+    phase_history: Array.isArray(obj.phase_history)
+      ? (obj.phase_history as PhaseHistoryEntry[])
+      : [],
+    // Pit Crew M4 Reviewer H3: preserve explicit null so a restored
+    // checkpoint with null resume_context round-trips faithfully.
+    // Only fall back to defaultState's shape when the field is
+    // missing or wrong-typed (array, primitive).
+    resume_context:
+      obj.resume_context === null
+        ? null
+        : obj.resume_context &&
+            typeof obj.resume_context === 'object' &&
+            !Array.isArray(obj.resume_context)
+          ? (obj.resume_context as ResumeContext)
+          : 'resume_context' in obj
+            ? null
+            : base.resume_context,
+  };
 }
 
 /** Persist state to disk. Auto-creates parent dir, stamps last_updated,
@@ -316,8 +375,18 @@ export function createCheckpoint(
   }
 
   const timestamp = new Date().toISOString();
+  // Pit Crew M4 Adversary F12 (HIGH, confirmed exploit): legacy ID
+  // was second-precision (`cp-2026-04-27T18-11-36`), so two
+  // checkpoints created in the same second collided — `restoreCheckpoint`
+  // returned the first match, the second became unreachable, and
+  // pruning could drop the wrong one. Post-fix: use the FULL ISO
+  // timestamp through milliseconds (slice(0,23) → `cp-2026-04-27T18-11-36-789Z`)
+  // PLUS a process-monotonic counter to defend against bursty
+  // sub-millisecond creation (rare but possible under fake timers /
+  // jitter-free CI clocks).
+  _checkpointCounter++;
   const checkpoint: Checkpoint = {
-    id: `cp-${timestamp.replace(/[:.]/g, '-').slice(0, 19)}`,
+    id: `cp-${timestamp.replace(/[:.]/g, '-').slice(0, 23)}-${_checkpointCounter.toString(36)}`,
     label: label || 'auto',
     timestamp,
     phase: state.current_phase,
@@ -369,9 +438,10 @@ export function restoreCheckpoint(
   state.current_step = checkpoint.step;
   state.current_agent = checkpoint.agent;
   state.approved_artifacts = [...(checkpoint.approved_artifacts || [])];
-  state.resume_context = checkpoint.resume_context
-    ? { ...checkpoint.resume_context }
-    : defaultState().resume_context;
+  // Pit Crew M4 Reviewer H3: legacy returns null when checkpoint has
+  // no resume_context — preserve that contract so downstream consumers
+  // can branch on `=== null`.
+  state.resume_context = checkpoint.resume_context ? { ...checkpoint.resume_context } : null;
   state.last_completed_step = null;
 
   if (_timelineHook) {
