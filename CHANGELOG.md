@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 In progress. M0 establishes the TypeScript toolchain. M1 adds the cross-module contract harness and other detection-infrastructure gates. M2 begins porting leaf utilities into TypeScript using the full 11-step per-module recipe — first port: `bin/lib-ts/io.ts`.
 
+### M2 — T4.1.10 config-merge.ts (sub-commit 17)
+- `bin/lib-ts/config-merge.ts` — pure-library port of `bin/lib/config-merge.js` (5 exports preserved verbatim: `flattenYaml`, `mergeConfigs`, `readConfig`, `writeConfig`, `writeConflictsFile`). The three-way-merge logic that drives `bin/upgrade.js`'s "framework version bump preserves user customizations" workflow is preserved bit-for-bit so upgrade-time semantics don't drift.
+- **Note on `flattenYaml`**: legacy ships its own indentation-based YAML flattener returning `Record<string, rawValueString>` with dotted-key paths. This is DIFFERENT from `parseSimpleYaml` (which T4.1.9 deleted) — `flattenYaml` returns RAW VALUE STRINGS, not type-coerced values. The merge math depends on string equality (`oldValue !== newValue`), so we preserve `flattenYaml` verbatim.
+- The 4 protected prefixes (`hooks.`, `project.name`, `project.description`, `project.approver`) are NEVER overwritten — pinned by tests so a future refactor can't accidentally strip them.
+- New named types: `ConfigConflict`, `MergeResult`.
+- `tests/test-config-merge.test.ts` — 15 tests across 7 describe blocks: `flattenYaml` (5 cases including raw-string preservation + deep nesting), three-way-merge adopt/preserve/conflict branches, protected-prefix invariants, new-keys block, `readConfig`/`writeConfig` round-trip, `writeConflictsFile` structured output.
+- All 11 verify-baseline gates **PASS**. Test count: **104 / 2254** (+1 file / +15 tests).
+
 ### M2 — T4.1.9 config-loader.ts (sub-commit 16)
 - `bin/lib-ts/config-loader.ts` — pure-TS port of `bin/lib/config-loader.js`. **Deletes the hand-rolled `parseSimpleYaml` from the public surface** per T4.1.9's explicit mandate; the module now uses the unified `yaml` package via `parse()`. Exports trimmed: `loadConfig`, `deepMerge`, `ConfigLoaderInputSchema` (legacy: `loadConfig`, `parseSimpleYaml`, `deepMerge`). The only surviving caller of legacy `parseSimpleYaml` is `bin/lib/next-phase.js`, which imports directly from `bin/lib/config-loader.js` (relative path, strangler-fig-protected) and is unaffected.
 - New named types: `ConfigLoaderInput`, `OverrideApplied`, `ProfileApplied`, `LoadedConfig`.
