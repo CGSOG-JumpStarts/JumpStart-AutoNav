@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 In progress. M0 establishes the TypeScript toolchain. M1 adds the cross-module contract harness and other detection-infrastructure gates. M2 begins porting leaf utilities into TypeScript using the full 11-step per-module recipe — first port: `bin/lib-ts/io.ts`.
 
+### M2 — T4.1.3 timestamps.ts (third leaf port, sub-commit 9)
+- `bin/lib-ts/timestamps.ts` — pure-library port of `bin/lib/timestamps.js` (3 functions + 1 regex constant: `now`, `validate`, `audit`, `ISO_UTC_REGEX`). Behavior parity verified by 23 unit tests covering every documented branch in `validate()` (empty, non-string, offset notation, garbage, future, past, ms-precision) plus `audit()` body-line + frontmatter scanning with all the legacy skip rules (`{{template}}`, bracketed placeholders, `Pending`, `N/A`, empty).
+- New named types: `ValidateResult`, `AuditResult`, `AuditInvalidEntry` replace the legacy module's untyped objects.
+- The legacy module's CLI driver (the `if (process.argv[1].endsWith('timestamps.js'))` block) is intentionally NOT ported; `bin/lib/timestamps.js` continues to handle subprocess invocations until M5's `runIpc` lands.
+- One documented JSON-output micro-difference: legacy emitted `"warning": null` for past timestamps; the TS port omits the key entirely (optional-undefined idiom). Both shapes round-trip to a falsy `warning` field — net behavior unchanged for any consumer using `result.warning ?? null`.
+- All 11 verify-baseline gates **PASS**. Test count: **91 / 2051** (+1 file / +23 tests).
+
 ### M2 — T4.1.2 hashing.ts (second leaf port, sub-commit 8)
 - `bin/lib-ts/hashing.ts` — pure-TS port of `bin/lib/hashing.js` (6 exports: `hashFile`, `hashContent`, `loadManifest`, `saveManifest`, `registerArtifact`, `verifyAll`). Behavior is byte-identical to the legacy module: same SHA-256 hex output, same manifest schema (`{ version, generated, lastUpdated?, artifacts }`), same throw semantics on fs / JSON-parse failures, same pre-rendered `summary` string format that downstream tools grep.
 - New named types added to the public surface: `Manifest`, `ArtifactEntry`, `RegisterResult`, `TamperedArtifact`, `VerifyResult` — they replace the legacy module's untyped object returns.
