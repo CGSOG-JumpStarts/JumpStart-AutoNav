@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 In progress. M0 establishes the TypeScript toolchain. M1 adds the cross-module contract harness and other detection-infrastructure gates. M2 begins porting leaf utilities into TypeScript using the full 11-step per-module recipe — first port: `bin/lib-ts/io.ts`.
 
+### M2 — T4.1.7 batch (4 leaf ports, sub-commit 13)
+Four pure-library ports landed together (the spec calls T4.1.7 a batch since the modules share the same recipe and have no inter-dependencies):
+- `bin/lib-ts/ambiguity-heatmap.ts` — vague-language + missing-constraint scanner. 5 exports (`scanAmbiguity`, `scanFile`, `generateHeatmap`, `VAGUE_TERMS`, `MISSING_CONSTRAINT_PATTERNS`). Vocabulary lists preserved verbatim. 12 tests.
+- `bin/lib-ts/complexity.ts` — adaptive planning depth calculator (`quick` / `standard` / `deep`). 4 exports (`calculateComplexity` + 3 vocab constants). Score weighting and depth thresholds preserved verbatim (≥50 deep / ≥20 standard / else quick). 9 tests.
+- `bin/lib-ts/context-chunker.ts` — context-window chunker. 4 exports (`estimateTokens`, `chunkContent`, `chunkImplementationPlan`, `MODEL_CONTEXT_LIMITS`). **Critical: the v1.1.14 forward-progress fix is preserved verbatim and pinned by 4 dedicated tests** (200k-char input terminates; overlap > chunk-size doesn't loop; every chunk has length > 0; last chunk reaches content.length). The pre-fix bug previously OOMed the test pool.
+- `bin/lib-ts/artifact-comparison.ts` — section-level diff for spec versions. 5 exports (`compareArtifacts`, `compareFiles`, `getArtifactHistory`, `extractSections`, `CHANGE_CATEGORIES`). 11 tests.
+- All 4 ports' legacy CLI driver blocks (where present) stay in JS until M5. New named types added across all 4 modules replace the legacy untyped object returns.
+- All 11 verify-baseline gates **PASS**. Test count: **98 / 2142** (+4 files / +43 tests).
+
 ### M2 — T4.1.6 versioning.ts (sixth leaf port, sub-commit 12)
 - `bin/lib-ts/versioning.ts` — pure-library port of `bin/lib/versioning.js` (5 exports: `generateTag`, `getNextVersion`, `createVersionTag`, `injectVersion`, `listVersions`). Tag scheme `spec/<artifact>/vX.Y.Z` preserved verbatim. Frontmatter injection rules preserved.
 - **Documented security improvement** vs legacy: legacy interpolated user-controlled `artifactName` / `version` / `message` into a shell command string via `child_process.execSync` with backtick templates — command-injection risk. The port uses the array-args form of `child_process.execFileSync` so inputs pass to git directly without shell interpretation. Result-shape is byte-identical for legitimate inputs; malicious shell-metacharacter inputs that would have escaped the legacy quoting now pass through to git as literal strings. Test pinned by an explicit "evil tag-message preserves intent without shelling out" assertion.

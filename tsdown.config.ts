@@ -30,6 +30,10 @@ export default defineConfig({
     'bin/lib-ts/locks.ts',
     'bin/lib-ts/diff.ts',
     'bin/lib-ts/versioning.ts',
+    'bin/lib-ts/ambiguity-heatmap.ts',
+    'bin/lib-ts/complexity.ts',
+    'bin/lib-ts/context-chunker.ts',
+    'bin/lib-ts/artifact-comparison.ts',
     // Future entries added per port:
     // 'src/cli/main.ts',         // Added at M8 (E3-S9 CLI dispatcher port)
     // 'src/bootstrap/init.ts',   // Added when bootstrap.js ports
