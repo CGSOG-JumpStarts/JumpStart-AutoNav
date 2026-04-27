@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 In progress. M0 establishes the TypeScript toolchain. M1 adds the cross-module contract harness and other detection-infrastructure gates. M2 begins porting leaf utilities into TypeScript using the full 11-step per-module recipe — first port: `bin/lib-ts/io.ts`.
 
+### M2 — T4.1.8 ipc.ts + config-yaml.ts (config-cluster opener, sub-commit 15)
+The architecturally significant pair: the shared subprocess runner (the second of two ADR-006 process.exit allowlisted sites) and the first config-layer port. Together they unlock M5's IPC fixture activation and the M3+ config-loader/config-merge ports.
+
+- `bin/lib-ts/ipc.ts` (NEW, T4.1.8 deliverable #1) — the canonical IPC adapter referenced by `specs/architecture.md §IPC module contract`. Exports `isDirectRun(import.meta.url)` (subprocess-only path guard) + `runIpc<TIn, TOut>(handler, schema?)` (the runner). Behavior:
+  - Reads stdin via `io.readStdin`, accepts either v0 (raw payload) or v1 (`{"version":1,"input":...}`) envelopes per ADR-007. Same handler answers both versions.
+  - Validates input via the supplied Zod schema if any; missing schema is the strangler-phase escape hatch (callers add schemas as their input shapes formalize).
+  - Translates typed errors to exit codes per ADR-006: `ValidationError → 2`, `LLMError → 3`, `JumpstartError → 99 (or .exitCode)`, untyped Error → 99.
+  - **Owns one of the two allowlisted `process.exit()` sites**. The check-process-exit gate's allowlist already names this file.
+- `bin/lib-ts/config-yaml.ts` (NEW, T4.1.8 deliverable #2) — pure-library port of `bin/lib/config-yaml.cjs` (5 exports verbatim: `parseConfigDocument`, `writeConfigDocument`, `updateBootstrapAnswers`, `setWorkflowCurrentPhase`, `getWorkflowSettings`). Preserves the `yaml` package's `Document` AST per T4.1.8 spec — `doc.setIn([...path], value)` keeps comments, blank lines, and key ordering across round-trips (ADR-003). Throws the legacy error-message shapes (`Config file not found:` and `Invalid YAML in <path>:`) verbatim for grep-compat.
+- `tests/test-ipc.test.ts` (NEW, 13 tests) covers `isDirectRun` across argv shapes + `runIpc` v0/v1 envelope handling, typed-error → exit-code mapping (4 cases), and Zod schema validation success + failure paths.
+- `tests/test-config-yaml.test.ts` (NEW, 15 tests) — Document round-trip preservation (comments + key order), `updateBootstrapAnswers` skip-rules + idempotency, `setWorkflowCurrentPhase` always-changed semantics, `getWorkflowSettings` `auto_handoff !== false` truthiness + null-current_phase fallback.
+- New named types added across both modules: `IpcHandler`, `BootstrapUpdateResult`, `BootstrapUpdates`, `PhaseUpdateResult`, `WorkflowSettings`.
+- `tsdown.config.ts` adds both new entries; `check-dist-exports` verifies the d.mts surface.
+- All 11 verify-baseline gates **PASS**. Test count: **102 / 2219** (+2 files / +28 tests).
+
 ### M2 — Pit Crew remediation (sub-commit 14)
 
 Three Pit Crew agents (Reviewer, QA, Adversary) reviewed the 7-port leaf-utility cluster as a coherent set. **30 findings: 7 BLOCKER/CRITICAL, 13 HIGH, 9 MED, 1 LOW.** Adversary delivered 8 confirmed running-code exploits. This sub-commit closes 22 findings; 8 deferred via Deviation Log.
