@@ -22,6 +22,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { redactSecrets } from './secret-scanner.js';
 
 const DEFAULT_OUTPUT_DIR = join('.jumpstart', 'evidence');
 const DEFAULT_STATE_FILE = join('.jumpstart', 'state', 'evidence.json');
@@ -148,7 +149,13 @@ export function saveState(state: EvidenceState, stateFile?: string): void {
   const dir = dirname(filePath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   state.last_updated = new Date().toISOString();
-  writeFileSync(filePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  // Pit Crew M5 Reviewer (HIGH): ADR-012 redaction missing in evidence-
+  // collector audit trail. Evidence items can carry tool-call payloads,
+  // CLI invocations, and config snapshots — any of which may contain
+  // bearer tokens or API keys. Apply redactSecrets before persistence
+  // so audit logs cannot leak credentials.
+  const redacted = redactSecrets(state);
+  writeFileSync(filePath, `${JSON.stringify(redacted, null, 2)}\n`, 'utf8');
 }
 
 export function collectEvidence(root: string, options: StateOptions = {}): CollectResult {
@@ -235,7 +242,9 @@ export function packageEvidence(root: string, options: StateOptions = {}): Packa
   };
 
   const manifestPath = join(outputDir, 'audit-manifest.json');
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+  // ADR-012: redact the audit manifest before persistence too.
+  const redactedManifest = redactSecrets(manifest);
+  writeFileSync(manifestPath, `${JSON.stringify(redactedManifest, null, 2)}\n`, 'utf8');
 
   return {
     success: true,

@@ -171,6 +171,36 @@ export function saveState(state: ChatIntegrationState, stateFile?: string): void
   writeFileSync(fp, `${JSON.stringify(redacted, null, 2)}\n`, 'utf8');
 }
 
+/** ADR-011-style webhook URL validation for chat integrations.
+ *  Same allowlist family as `llm-provider.validateLLMEndpoint`:
+ *    - HTTPS-only with no userinfo (rejects `https://attacker.com@trusted.com`)
+ *    - http://localhost / 127.0.0.1 / [::1] (dev-mode self-host)
+ *  Returns null on success, an error string on rejection.
+ *
+ *  Pit Crew M5 Adversary: configure() previously stored any
+ *  `webhook_url` value verbatim, allowing env-injection-driven
+ *  exfiltration (an attacker setting a chat-webhook env var to
+ *  `https://attacker.com@trusted-slack.com` would route every
+ *  notification through their proxy).
+ */
+function _validateWebhookUrl(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return `webhook_url "${url}" is not a parsable URL.`;
+  }
+  if (parsed.username !== '' || parsed.password !== '') {
+    return `webhook_url "${url}" contains userinfo (username/password); embed credentials via headers instead.`;
+  }
+  if (parsed.protocol === 'https:') return null;
+  if (parsed.protocol === 'http:') {
+    const host = parsed.hostname.toLowerCase();
+    if (['localhost', '127.0.0.1', '::1'].includes(host) || host === '[::1]') return null;
+  }
+  return `webhook_url "${url}" is not HTTPS and not a localhost address.`;
+}
+
 /**
  * Configure a chat integration.
  */
@@ -180,6 +210,16 @@ export function configure(platform: string, options: ConfigureOptions = {}): Con
       success: false,
       error: `Unknown platform: ${platform}. Valid: ${PLATFORMS.join(', ')}`,
     };
+  }
+
+  // Validate webhook_url against the allowlist if supplied. Honors
+  // `JUMPSTART_ALLOW_INSECURE_LLM_URL=1` override (same env-var as
+  // ADR-011 — one knob, two consumers).
+  if (options.webhook_url && process.env.JUMPSTART_ALLOW_INSECURE_LLM_URL !== '1') {
+    const err = _validateWebhookUrl(options.webhook_url);
+    if (err) {
+      return { success: false, error: err };
+    }
   }
 
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
