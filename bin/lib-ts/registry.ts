@@ -112,9 +112,21 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
 }
 
+/** Recursive forbidden-key check. Pit Crew M6 Reviewer (HIGH): the
+ *  previous implementation only checked top-level keys, leaving
+ *  nested `__proto__` payloads through `validateForPublishing`. */
+function hasForbiddenKey(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  for (const key of Object.keys(value)) {
+    if (FORBIDDEN_KEYS.has(key)) return true;
+    if (hasForbiddenKey(value[key])) return true;
+  }
+  return false;
+}
+
 /** Soft-fail JSON load with prototype-pollution rejection. Returns null
  *  on parse failure, scalar root, array root, or any prototype-pollution
- *  key in the top level. */
+ *  key anywhere in the tree. */
 function safeParseRegistry(raw: string): Record<string, unknown> | null {
   let parsed: unknown;
   try {
@@ -123,9 +135,7 @@ function safeParseRegistry(raw: string): Record<string, unknown> | null {
     return null;
   }
   if (!isPlainObject(parsed)) return null;
-  for (const key of Object.keys(parsed)) {
-    if (FORBIDDEN_KEYS.has(key)) return null;
-  }
+  if (hasForbiddenKey(parsed)) return null;
   return parsed;
 }
 
@@ -197,17 +207,36 @@ export function validateForPublishing(moduleDir: string): ValidateResult {
     };
   }
 
-  let manifest: ModuleManifest;
+  // Pit Crew M6 Reviewer (HIGH): route module.json through the same
+  // shape-validating parser as the registry itself. Pre-fix, a
+  // crafted `module.json` with `{"__proto__": {...}, "name": "x"}`
+  // would land in `manifest` with polluted prototype, and any
+  // subsequent `for...in` over the manifest would surface attacker-
+  // controlled keys. Post-fix: rejected at parse time.
+  let raw: string;
   try {
-    manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as ModuleManifest;
+    raw = readFileSync(manifestPath, 'utf8');
   } catch (err) {
     return {
       valid: false,
-      errors: [`Invalid JSON in module.json: ${(err as Error).message}`],
+      errors: [`Failed to read module.json: ${(err as Error).message}`],
       warnings: [],
       entry: null,
     };
   }
+
+  const parsed = safeParseRegistry(raw);
+  if (!parsed) {
+    return {
+      valid: false,
+      errors: [
+        'Invalid JSON in module.json (parse failure, non-object root, or forbidden prototype-pollution key)',
+      ],
+      warnings: [],
+      entry: null,
+    };
+  }
+  const manifest = parsed as ModuleManifest;
 
   // Required fields
   if (!manifest.name) errors.push('Missing "name" in manifest');

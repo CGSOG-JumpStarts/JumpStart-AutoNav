@@ -233,6 +233,44 @@ const symlink = buildZip([
   },
 ]);
 
+// 6. spoofed-symlink.zip — symlink encoded with non-Unix host byte
+//    Pit Crew M6 BLOCKER (Adversary): pre-fix the symlink check only
+//    fired when versionMadeBy.host === 3. With host = 0 (MS-DOS), the
+//    same S_IFLNK bits in externalAttrs were silently ignored.
+const spoofedSymlink = buildZip([
+  {
+    fileName: 'evil-link-spoofed',
+    data: Buffer.from('/etc/passwd', 'utf8'),
+    method: STORED,
+    hostSystem: 0, // <-- spoofed; the gate must still fire
+    externalAttrs: SYMLINK_ATTRS,
+  },
+]);
+
+// 7. windows-drive.zip — entry name with a Windows drive letter
+//    Pit Crew M6 QA: previously the C:foo / C:\foo branch had no
+//    fixture coverage even though `validateEntryName` rejects it.
+const windowsDrive = buildZip([
+  {
+    fileName: 'C:\\Windows\\System32\\evil.dll',
+    data: Buffer.from('malicious windows-drive payload\n', 'utf8'),
+    method: DEFLATE,
+  },
+]);
+
+// 8. bad-compression.zip — compression method = 2 (PKWARE Implode)
+//    Pit Crew M6 QA: `readEntryData` rejects every method other than
+//    0 (stored) and 8 (deflate). Pre-fix had no fixture exercising
+//    this branch, so a regression that silently accepted an unsupported
+//    method would have shipped green.
+const badCompression = buildZip([
+  {
+    fileName: 'oddball.bin',
+    data: Buffer.from('payload', 'utf8'),
+    method: 2, // PKWARE Implode — neither stored nor deflate
+  },
+]);
+
 // ─── Write files ────────────────────────────────────────────────────────────
 
 const outputs = [
@@ -241,6 +279,9 @@ const outputs = [
   ['absolute.zip', absolute],
   ['null-byte.zip', nullByte],
   ['symlink.zip', symlink],
+  ['spoofed-symlink.zip', spoofedSymlink],
+  ['windows-drive.zip', windowsDrive],
+  ['bad-compression.zip', badCompression],
 ];
 
 for (const [name, buf] of outputs) {

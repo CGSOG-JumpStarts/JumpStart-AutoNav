@@ -81,6 +81,7 @@ import { inflateRawSync } from 'node:zlib';
 import { loadConfig } from './config-loader.js';
 import { ValidationError } from './errors.js';
 import { applyIntegration } from './integrate.js';
+import { assertInsideRoot } from './path-safety.js';
 import { redactSecrets } from './secret-scanner.js';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -327,16 +328,67 @@ export function detectIDE(projectRoot: string): IDEPaths {
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
+ * ADR-011-style URL validator for marketplace endpoints. Enforces:
+ *   - HTTPS-only, OR http://localhost / 127.0.0.1 / [::1] (dev mode)
+ *   - No userinfo (rejects `https://attacker.com@trusted.com`)
+ *   - Parsable URL
+ *
+ * Honors the `JUMPSTART_ALLOW_INSECURE_LLM_URL=1` escape hatch (one
+ * knob, three consumers — same env-var as ADR-011's LLM endpoint
+ * validator and chat-integration's webhook validator).
+ *
+ * Throws `ValidationError` on rejection.
+ */
+function validateMarketplaceUrl(url: string, kind: 'registry' | 'download'): void {
+  if (process.env.JUMPSTART_ALLOW_INSECURE_LLM_URL === '1') return;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new ValidationError(
+      `${kind} URL "${url}" is not a parsable URL.`,
+      'marketplace-url-validate',
+      []
+    );
+  }
+  if (parsed.username !== '' || parsed.password !== '') {
+    throw new ValidationError(
+      `${kind} URL "${url}" contains userinfo (username/password); embed credentials via headers instead.`,
+      'marketplace-url-validate',
+      []
+    );
+  }
+  if (parsed.protocol === 'https:') return;
+  if (parsed.protocol === 'http:') {
+    const host = parsed.hostname.toLowerCase();
+    if (['localhost', '127.0.0.1', '::1'].includes(host) || host === '[::1]') return;
+  }
+  throw new ValidationError(
+    `${kind} URL "${url}" is not HTTPS and not a localhost address.`,
+    'marketplace-url-validate',
+    []
+  );
+}
+
+/**
  * Fetch the remote registry index.json. 30-second timeout.
+ *
+ * Pit Crew M6 Adversary 2: `fetch()` previously followed redirects
+ * by default — a registry server returning 302 to an attacker domain
+ * would silently exfiltrate the request. Post-fix: `redirect: 'error'`
+ * causes any 3xx response to throw rather than follow.
  */
 export async function fetchRegistryIndex(registryUrl?: string): Promise<RegistryIndex> {
   const url = registryUrl || DEFAULT_REGISTRY_URL;
+  validateMarketplaceUrl(url, 'registry');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
 
   try {
     const res = await fetch(url, {
       signal: controller.signal,
+      redirect: 'error',
       headers: { 'User-Agent': `jumpstart-mode/${FRAMEWORK_VERSION}` },
     });
 
@@ -512,6 +564,36 @@ function hasForbiddenKey(value: unknown): boolean {
   return false;
 }
 
+/**
+ * Validate one InstalledEntry value. Pit Crew M6 Reviewer (HIGH):
+ * the previous implementation cast `items` to `Record<string,
+ * InstalledEntry>` after only checking the top-level `items` was a
+ * plain object. A corrupted or attacker-controlled `installed.json`
+ * with `targetPaths: [null]` or `targetPaths: 42` then crashed
+ * downstream `path.resolve(projectRoot, tp)` with an uncaught
+ * `TypeError` (exit 99 — violates ADR-006). Post-fix: every entry is
+ * shape-validated; bad entries are dropped silently with default-
+ * shape soft-fail semantics consistent with the rest of the safe-
+ * parse family.
+ */
+function isValidInstalledEntry(v: unknown): v is InstalledEntry {
+  if (!isPlainObject(v)) return false;
+  if (typeof v.version !== 'string') return false;
+  if (typeof v.installedAt !== 'string') return false;
+  if (!Array.isArray(v.targetPaths)) return false;
+  if (v.targetPaths.some((p) => typeof p !== 'string')) return false;
+  if (!Array.isArray(v.remappedFiles)) return false;
+  if (v.remappedFiles.some((p) => typeof p !== 'string')) return false;
+  // Optional fields — only check type if present.
+  if (v.displayName !== undefined && typeof v.displayName !== 'string') return false;
+  if (v.type !== undefined && typeof v.type !== 'string') return false;
+  if (v.keywords !== undefined) {
+    if (!Array.isArray(v.keywords)) return false;
+    if (v.keywords.some((k) => typeof k !== 'string')) return false;
+  }
+  return true;
+}
+
 function safeParseInstalled(raw: string): InstalledData | null {
   let parsed: unknown;
   try {
@@ -523,9 +605,17 @@ function safeParseInstalled(raw: string): InstalledData | null {
   if (hasForbiddenKey(parsed)) return null;
   const items = (parsed as Record<string, unknown>).items;
   if (items !== undefined && !isPlainObject(items)) return null;
-  return {
-    items: (items as Record<string, InstalledEntry> | undefined) ?? {},
-  };
+
+  // Filter to well-formed entries only.
+  const validated: Record<string, InstalledEntry> = {};
+  if (items) {
+    for (const [id, entry] of Object.entries(items)) {
+      if (isValidInstalledEntry(entry)) {
+        validated[id] = entry;
+      }
+    }
+  }
+  return { items: validated };
 }
 
 /**
@@ -590,13 +680,38 @@ export function isInstalled(itemId: string, projectRoot: string): InstalledEntry
 
 /**
  * Download a zip file and verify its SHA256 checksum.
- * Throws `ValidationError` (exit code 2) on checksum mismatch — this is
- * a security-boundary failure, not an informational error.
+ *
+ * Pit Crew M6 Adversary 2 (BLOCKER): three hardenings landed here:
+ *   1. `redirect: 'error'` on the fetch — a compromised registry can
+ *      no longer 302-redirect the download to an attacker domain.
+ *   2. `validateMarketplaceUrl(downloadUrl, 'download')` enforces
+ *      HTTPS-only (or localhost) and rejects userinfo confusion.
+ *   3. `expectedSha256` is now REQUIRED. The legacy/pre-fix path
+ *      treated the checksum as optional, so a registry serving an
+ *      item with `download.checksumSha256` omitted would download
+ *      anything and accept it. Callers MUST supply a checksum; the
+ *      `JUMPSTART_ALLOW_INSECURE_LLM_URL=1` env override (matches
+ *      registry-URL validation) lets dev/test paths bypass the
+ *      requirement.
+ *
+ * Throws `ValidationError` (exit code 2) on checksum mismatch, missing
+ * checksum, redirect, or non-allowlisted URL.
  */
 export async function downloadAndVerify(
   downloadUrl: string,
   expectedSha256?: string
 ): Promise<string> {
+  validateMarketplaceUrl(downloadUrl, 'download');
+
+  // Checksum is mandatory unless explicitly bypassed.
+  if (!expectedSha256 && process.env.JUMPSTART_ALLOW_INSECURE_LLM_URL !== '1') {
+    throw new ValidationError(
+      `Download "${downloadUrl}" requires a SHA-256 checksum (registry item missing "download.checksumSha256"). Set JUMPSTART_ALLOW_INSECURE_LLM_URL=1 to bypass for local dev.`,
+      'marketplace-download-verify',
+      []
+    );
+  }
+
   const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'jumpstart-install-'));
   const tmpFile = path.join(tmpDir, 'package.zip');
 
@@ -606,6 +721,7 @@ export async function downloadAndVerify(
   try {
     const res = await fetch(downloadUrl, {
       signal: controller.signal,
+      redirect: 'error',
       headers: { 'User-Agent': `jumpstart-mode/${FRAMEWORK_VERSION}` },
     });
 
@@ -770,7 +886,11 @@ function parseCentralDirectory(buf: Buffer): ZipEntry[] {
       );
     }
 
-    const versionMadeBy = buf.readUInt16LE(cursor + 4);
+    // Pre-fix used `versionMadeBy >> 8` (host byte) to gate symlink
+    // detection. Post-fix detection no longer depends on it; we parse
+    // and discard for offset alignment.
+    const _versionMadeBy = buf.readUInt16LE(cursor + 4);
+    void _versionMadeBy;
     const compressionMethod = buf.readUInt16LE(cursor + 10);
     let compressedSize = buf.readUInt32LE(cursor + 20);
     let uncompressedSize = buf.readUInt32LE(cursor + 24);
@@ -806,18 +926,21 @@ function parseCentralDirectory(buf: Buffer): ZipEntry[] {
       extraCursor += 4 + dataSize;
     }
 
-    // Symlink detection: external attributes encode unix file mode in
-    // the high 16 bits when the host system byte (versionMadeBy >> 8) is
-    // 3 (UNIX). S_IFLNK = 0xA000.
-    const hostSystem = (versionMadeBy >> 8) & 0xff;
-    let isSymlink = false;
-    if (hostSystem === 3) {
-      const unixMode = (externalAttrs >>> 16) & 0xffff;
-      const fileType = unixMode & 0xf000;
-      if (fileType === 0xa000) {
-        isSymlink = true;
-      }
-    }
+    // Symlink detection. Pit Crew M6 BLOCKER (Adversary): the previous
+    // gate fired only when `versionMadeBy >> 8 === 3` (UNIX host byte).
+    // A ZIP authored with any other host byte (MS-DOS = 0, NTFS = 10,
+    // VFAT = 14, OS X via Info-ZIP = 19) carrying S_IFLNK file-type bits
+    // bypassed the check. Defense-in-depth: inspect the unix-mode high
+    // 16 bits regardless of host byte. The S_IFLNK file-type nibble
+    // (`0xA000`) is the strongest signal a ZIP can carry that an entry
+    // is intended as a symlink. Legitimate non-UNIX-authored archives
+    // do not encode `0xA000` in their high attrs, so the false-positive
+    // rate is negligible. (`versionMadeBy` is no longer consulted; we
+    // keep parsing it because the field is fixed-offset and skipping
+    // would mis-align downstream offsets.)
+    const unixMode = (externalAttrs >>> 16) & 0xffff;
+    const fileType = unixMode & 0xf000;
+    const isSymlink = fileType === 0xa000;
 
     entries.push({
       fileName,
@@ -1067,6 +1190,14 @@ function installFromStaging(
   }
 
   for (const targetRel of targetPaths) {
+    // Pit Crew M6 BLOCKER (Reviewer + Adversary): registry-supplied
+    // `item.install.targetPaths` was previously taken verbatim,
+    // bypassing every ADR-010 guard once the ZIP was extracted to
+    // staging — a malicious registry entry with
+    // `targetPaths: ["../../.ssh/authorized_keys"]` would `cpSync`
+    // the staged contents to the user's home directory. Gate every
+    // target through `assertInsideRoot`.
+    assertInsideRoot(targetRel, projectRoot);
     const targetAbs = path.resolve(projectRoot, targetRel);
     mkdirSync(targetAbs, { recursive: true });
     cpSync(contentRoot, targetAbs, { recursive: true, force: true });
@@ -1086,6 +1217,12 @@ function installFromStaging(
       const primaryTarget = extracted[0];
       if (!primaryTarget) continue;
 
+      // Pit Crew M6 HIGH: `agentRelPath` is registry-supplied. Without
+      // a containment check, `path.join(primaryTarget, '../../etc/shadow')`
+      // would copy arbitrary host files into the IDE agent directory.
+      // `assertInsideRoot` rejects any path that escapes the staging
+      // primary-target root.
+      assertInsideRoot(agentRelPath, primaryTarget);
       const srcFile = path.join(primaryTarget, agentRelPath);
       if (!existsSync(srcFile)) continue;
 
@@ -1104,6 +1241,8 @@ function installFromStaging(
       const primaryTarget = extracted[0];
       if (!primaryTarget) continue;
 
+      // Pit Crew M6 HIGH: same defense as `contains.agents` above.
+      assertInsideRoot(promptRelPath, primaryTarget);
       const srcFile = path.join(primaryTarget, promptRelPath);
       if (!existsSync(srcFile)) continue;
 
@@ -1434,7 +1573,14 @@ export function uninstallItem(itemId: string, projectRoot: string): UninstallRes
 
   const removed: string[] = [];
 
+  // Pit Crew M6 BLOCKER (Reviewer) + Adversary 5: paths in
+  // `installed.json` are registry-derived. A tampered ledger or a
+  // ledger written from a malicious install (pre-fix) would let
+  // `uninstallItem` `rmSync` arbitrary host paths. Gate every entry
+  // through `assertInsideRoot` — any escape attempt aborts the
+  // uninstall (consistent with atomic semantics).
   for (const tp of entry.targetPaths || []) {
+    assertInsideRoot(tp, projectRoot);
     const abs = path.resolve(projectRoot, tp);
     if (existsSync(abs)) {
       rmSync(abs, { recursive: true, force: true });
@@ -1443,6 +1589,7 @@ export function uninstallItem(itemId: string, projectRoot: string): UninstallRes
   }
 
   for (const rf of entry.remappedFiles || []) {
+    assertInsideRoot(rf, projectRoot);
     const abs = path.resolve(projectRoot, rf);
     if (existsSync(abs)) {
       rmSync(abs, { force: true });
