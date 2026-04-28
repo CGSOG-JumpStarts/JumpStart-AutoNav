@@ -1,0 +1,19 @@
+{
+  "items": {
+    "skill.ignition": {
+      "version": "1.0.0",
+      "displayName": "Ignition Skill",
+      "type": "skill",
+      "installedAt": "2026-01-15T10:00:00.000Z",
+      "targetPaths": [
+        ".jumpstart/skills/ignition"
+      ],
+      "remappedFiles": [],
+      "keywords": [
+        "scaffold",
+        "init",
+        "startup"
+      ]
+    }
+  }
+}

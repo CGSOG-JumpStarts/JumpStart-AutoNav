@@ -1,0 +1,12 @@
+{
+  "items": {
+    "skill.minimal": {
+      "version": "0.0.1",
+      "installedAt": "2025-09-01T00:00:00.000Z",
+      "targetPaths": [
+        ".jumpstart/skills/minimal"
+      ],
+      "remappedFiles": []
+    }
+  }
+}

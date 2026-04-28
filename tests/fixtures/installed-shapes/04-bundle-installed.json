@@ -1,0 +1,22 @@
+{
+  "items": {
+    "bundle.governance": {
+      "version": "1.5.0",
+      "displayName": "Governance Bundle",
+      "type": "bundle",
+      "installedAt": "2026-02-01T08:00:00.000Z",
+      "targetPaths": [
+        ".jumpstart/bundles/governance"
+      ],
+      "remappedFiles": [
+        ".jumpstart/agents/risk-officer.md",
+        ".jumpstart/prompts/cab-review.prompt.md"
+      ],
+      "keywords": [
+        "compliance",
+        "risk",
+        "cab"
+      ]
+    }
+  }
+}

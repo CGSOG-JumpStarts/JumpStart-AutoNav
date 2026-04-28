@@ -1,0 +1,14 @@
+{
+  "items": {
+    "skill.legacy": {
+      "version": "0.1.0",
+      "displayName": "Legacy Skill",
+      "type": "skill",
+      "installedAt": "2025-11-15T08:00:00.000Z",
+      "targetPaths": [
+        ".jumpstart/skills/legacy"
+      ],
+      "remappedFiles": []
+    }
+  }
+}

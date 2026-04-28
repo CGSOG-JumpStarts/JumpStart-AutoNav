@@ -1,0 +1,75 @@
+{
+  "items": {
+    "skill.ignition": {
+      "version": "1.0.0",
+      "displayName": "Ignition Skill",
+      "type": "skill",
+      "installedAt": "2026-01-15T10:00:00.000Z",
+      "targetPaths": [
+        ".jumpstart/skills/ignition"
+      ],
+      "remappedFiles": [],
+      "keywords": [
+        "scaffold",
+        "init"
+      ]
+    },
+    "agent.scout": {
+      "version": "0.9.2",
+      "displayName": "Scout Agent",
+      "type": "agent",
+      "installedAt": "2026-01-16T11:30:00.000Z",
+      "targetPaths": [
+        ".jumpstart/agents/scout"
+      ],
+      "remappedFiles": [
+        ".jumpstart/agents/scout.md"
+      ],
+      "keywords": [
+        "recon"
+      ]
+    },
+    "prompt.architect-review": {
+      "version": "2.1.0",
+      "displayName": "Architect Review",
+      "type": "prompt",
+      "installedAt": "2026-01-17T09:15:42.123Z",
+      "targetPaths": [
+        ".jumpstart/prompts/architect-review"
+      ],
+      "remappedFiles": [
+        ".jumpstart/prompts/architect-review.prompt.md"
+      ],
+      "keywords": [
+        "review"
+      ]
+    },
+    "skill.legacy": {
+      "version": "0.1.0",
+      "displayName": "Legacy Skill",
+      "type": "skill",
+      "installedAt": "2025-11-15T08:00:00.000Z",
+      "targetPaths": [
+        ".jumpstart/skills/legacy"
+      ],
+      "remappedFiles": []
+    },
+    "bundle.governance": {
+      "version": "1.5.0",
+      "displayName": "Governance Bundle",
+      "type": "bundle",
+      "installedAt": "2026-02-01T08:00:00.000Z",
+      "targetPaths": [
+        ".jumpstart/bundles/governance"
+      ],
+      "remappedFiles": [
+        ".jumpstart/agents/risk-officer.md",
+        ".jumpstart/prompts/cab-review.prompt.md"
+      ],
+      "keywords": [
+        "compliance",
+        "risk"
+      ]
+    }
+  }
+}

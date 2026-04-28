@@ -1,0 +1,23 @@
+{
+  "items": {
+    "agent.architect": {
+      "version": "3.0.0",
+      "displayName": "Architect Agent",
+      "type": "agent",
+      "installedAt": "2026-03-10T09:00:00.000Z",
+      "targetPaths": [
+        ".jumpstart/agents/architect"
+      ],
+      "remappedFiles": [
+        ".github/agents/architect.agent.md",
+        ".github/prompts/architect-protocol.prompt.md",
+        ".github/prompts/architect-review.prompt.md"
+      ],
+      "keywords": [
+        "design",
+        "patterns",
+        "adr"
+      ]
+    }
+  }
+}

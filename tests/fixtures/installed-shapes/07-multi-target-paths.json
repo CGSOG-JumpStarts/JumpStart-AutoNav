@@ -1,0 +1,22 @@
+{
+  "items": {
+    "skill.dual-deploy": {
+      "version": "1.0.0",
+      "displayName": "Dual Deploy",
+      "type": "skill",
+      "installedAt": "2026-03-05T12:00:00.000Z",
+      "targetPaths": [
+        ".jumpstart/skills/dual-deploy",
+        ".github/workflows/deploy",
+        "scripts/deploy"
+      ],
+      "remappedFiles": [
+        ".jumpstart/agents/deploy-runner.md"
+      ],
+      "keywords": [
+        "deploy",
+        "ci"
+      ]
+    }
+  }
+}

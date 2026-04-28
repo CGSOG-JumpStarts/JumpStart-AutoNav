@@ -1,0 +1,21 @@
+{
+  "items": {
+    "skill.testing": {
+      "version": "0.5.0",
+      "displayName": "Testing Helpers",
+      "type": "skill",
+      "installedAt": "2026-03-01T14:22:00.000Z",
+      "targetPaths": [
+        ".jumpstart/skills/testing"
+      ],
+      "remappedFiles": [],
+      "keywords": [
+        "vitest",
+        "jest",
+        "mocha",
+        "fixture",
+        "snapshot"
+      ]
+    }
+  }
+}
