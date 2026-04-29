@@ -203,6 +203,63 @@ const subCommands: Record<string, () => Promise<CommandDef>> = {
   usage: lazy(() => import('./commands/llm.js').then((m) => m.usageCommand)),
   'ai-intake': lazy(() => import('./commands/llm.js').then((m) => m.aiIntakeCommand)),
   'finops-planner': lazy(() => import('./commands/llm.js').then((m) => m.finopsPlannerCommand)),
+
+  // Enterprise/platform/misc cluster (T4.7.2 batch 9 — FINAL)
+  'enterprise-search': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.enterpriseSearchCommand)
+  ),
+  'enterprise-templates': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.enterpriseTemplatesCommand)
+  ),
+  'env-promotion': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.envPromotionCommand)
+  ),
+  'fitness-functions': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.fitnessFunctionsCommand)
+  ),
+  impact: lazy(() => import('./commands/enterprise.js').then((m) => m.impactCommand)),
+  'knowledge-graph': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.knowledgeGraphCommand)
+  ),
+  'legacy-modernizer': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.legacyModernizerCommand)
+  ),
+  'merge-templates': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.mergeTemplatesCommand)
+  ),
+  'migration-planner': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.migrationPlannerCommand)
+  ),
+  'multi-repo': lazy(() => import('./commands/enterprise.js').then((m) => m.multiRepoCommand)),
+  'parallel-agents': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.parallelAgentsCommand)
+  ),
+  'pattern-library': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.patternLibraryCommand)
+  ),
+  'persona-packs': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.personaPacksCommand)
+  ),
+  'platform-engineering': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.platformEngineeringCommand)
+  ),
+  'pr-package': lazy(() => import('./commands/enterprise.js').then((m) => m.prPackageCommand)),
+  'promptless-mode': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.promptlessModeCommand)
+  ),
+  'reference-arch': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.referenceArchCommand)
+  ),
+  'release-readiness': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.releaseReadinessCommand)
+  ),
+  'codebase-retrieval': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.codebaseRetrievalCommand)
+  ),
+  'contract-first': lazy(() =>
+    import('./commands/enterprise.js').then((m) => m.contractFirstCommand)
+  ),
+  deterministic: lazy(() => import('./commands/enterprise.js').then((m) => m.deterministicCommand)),
 };
 
 // ─────────────────────────────────────────────────────────────────────────
