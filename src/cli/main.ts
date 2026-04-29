@@ -156,6 +156,15 @@ const subCommands: Record<string, () => Promise<CommandDef>> = {
   integrate: lazy(() => import('./commands/marketplace.js').then((m) => m.integrateCommand)),
   update: lazy(() => import('./commands/marketplace.js').then((m) => m.updateCommand)),
   upgrade: lazy(() => import('./commands/marketplace.js').then((m) => m.upgradeCommand)),
+
+  // Runners cluster (T4.7.2 batch 4 — bin/cli.js lines ~972 (verify), ~1166
+  // (test); holodeck/headless/smoke/regression were standalone scripts)
+  verify: lazy(() => import('./commands/runners.js').then((m) => m.verifyCommand)),
+  holodeck: lazy(() => import('./commands/runners.js').then((m) => m.holodeckCommand)),
+  headless: lazy(() => import('./commands/runners.js').then((m) => m.headlessCommand)),
+  smoke: lazy(() => import('./commands/runners.js').then((m) => m.smokeCommand)),
+  regression: lazy(() => import('./commands/runners.js').then((m) => m.regressionCommand)),
+  test: lazy(() => import('./commands/runners.js').then((m) => m.testCommand)),
 };
 
 // ─────────────────────────────────────────────────────────────────────────
