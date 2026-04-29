@@ -370,6 +370,13 @@ const subCommands: Record<string, () => Promise<CommandDef>> = {
   'workstream-ownership': lazy(() =>
     import('./commands/cleanup.js').then((m) => m.workstreamOwnershipCommand)
   ),
+
+  // Deferred-from-#16 cluster (5 interactive/render-heavy commands)
+  quickstart: lazy(() => import('./commands/deferred.js').then((m) => m.quickstartCommand)),
+  'self-evolve': lazy(() => import('./commands/deferred.js').then((m) => m.selfEvolveCommand)),
+  summarize: lazy(() => import('./commands/deferred.js').then((m) => m.summarizeCommand)),
+  timeline: lazy(() => import('./commands/deferred.js').then((m) => m.timelineCommand)),
+  'validate-all': lazy(() => import('./commands/deferred.js').then((m) => m.validateAllCommand)),
 };
 
 // ─────────────────────────────────────────────────────────────────────────
