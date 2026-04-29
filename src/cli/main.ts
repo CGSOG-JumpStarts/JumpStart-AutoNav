@@ -192,6 +192,17 @@ const subCommands: Record<string, () => Promise<CommandDef>> = {
   'event-modeling': lazy(() =>
     import('./commands/spec-quality.js').then((m) => m.eventModelingCommand)
   ),
+
+  // LLM/cost cluster (T4.7.2 batch 6)
+  'cost-router': lazy(() => import('./commands/llm.js').then((m) => m.costRouterCommand)),
+  'model-router': lazy(() => import('./commands/llm.js').then((m) => m.modelRouterCommand)),
+  'model-governance': lazy(() => import('./commands/llm.js').then((m) => m.modelGovernanceCommand)),
+  'prompt-governance': lazy(() =>
+    import('./commands/llm.js').then((m) => m.promptGovernanceCommand)
+  ),
+  usage: lazy(() => import('./commands/llm.js').then((m) => m.usageCommand)),
+  'ai-intake': lazy(() => import('./commands/llm.js').then((m) => m.aiIntakeCommand)),
+  'finops-planner': lazy(() => import('./commands/llm.js').then((m) => m.finopsPlannerCommand)),
 };
 
 // ─────────────────────────────────────────────────────────────────────────
