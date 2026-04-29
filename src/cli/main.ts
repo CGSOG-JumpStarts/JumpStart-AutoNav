@@ -302,6 +302,61 @@ const subCommands: Record<string, () => Promise<CommandDef>> = {
   'ai-evaluation': lazy(() =>
     import('./commands/governance.js').then((m) => m.aiEvaluationCommand)
   ),
+
+  // Collaboration/UX cluster (T4.7.2 batch 8)
+  // NOTE: `ai-intake` already wired in the LLM/cost cluster above (batch 6
+  // landed first). The collaboration.ts module's aiIntakeCommand is unused
+  // — same underlying lib so behavior is equivalent.
+  'backlog-sync': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.backlogSyncCommand)
+  ),
+  'bcdr-planning': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.bcdrPlanningCommand)
+  ),
+  'branch-workflow': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.branchWorkflowCommand)
+  ),
+  'cab-output': lazy(() => import('./commands/collaboration.js').then((m) => m.cabOutputCommand)),
+  'chat-integration': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.chatIntegrationCommand)
+  ),
+  'ci-cd-integration': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.ciCdIntegrationCommand)
+  ),
+  collaboration: lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.collaborationCommand)
+  ),
+  'context-onboarding': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.contextOnboardingCommand)
+  ),
+  'data-contracts': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.dataContractsCommand)
+  ),
+  'db-evolution': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.dbEvolutionCommand)
+  ),
+  'decision-conflicts': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.decisionConflictsCommand)
+  ),
+  'delivery-confidence': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.deliveryConfidenceCommand)
+  ),
+  'dependency-upgrade': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.dependencyUpgradeCommand)
+  ),
+  'design-system': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.designSystemCommand)
+  ),
+  'diagram-studio': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.diagramStudioCommand)
+  ),
+  elicitation: lazy(() => import('./commands/collaboration.js').then((m) => m.elicitationCommand)),
+  'estimation-studio': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.estimationStudioCommand)
+  ),
+  'playback-summaries': lazy(() =>
+    import('./commands/collaboration.js').then((m) => m.playbackSummariesCommand)
+  ),
 };
 
 // ─────────────────────────────────────────────────────────────────────────
