@@ -261,101 +261,114 @@ const subCommands: Record<string, () => Promise<CommandDef>> = {
   ),
   deterministic: lazy(() => import('./commands/enterprise.js').then((m) => m.deterministicCommand)),
 
-  // Governance/risk cluster (T4.7.2 batch 7)
-  adr: lazy(() => import('./commands/governance.js').then((m) => m.adrCommand)),
-  policy: lazy(() => import('./commands/governance.js').then((m) => m.policyCommand)),
-  'role-approval': lazy(() =>
-    import('./commands/governance.js').then((m) => m.roleApprovalCommand)
+  // Cleanup cluster (T4.7.2 batch 10 — FINAL)
+  adr: lazy(() => import('./commands/cleanup.js').then((m) => m.adrCommand)),
+  'ai-evaluation': lazy(() => import('./commands/cleanup.js').then((m) => m.aiEvaluationCommand)),
+  'artifact-comparison': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.artifactComparisonCommand)
   ),
-  'raci-matrix': lazy(() => import('./commands/governance.js').then((m) => m.raciMatrixCommand)),
-  'compliance-packs': lazy(() =>
-    import('./commands/governance.js').then((m) => m.compliancePacksCommand)
-  ),
-  'evidence-collector': lazy(() =>
-    import('./commands/governance.js').then((m) => m.evidenceCollectorCommand)
-  ),
-  'waiver-workflow': lazy(() =>
-    import('./commands/governance.js').then((m) => m.waiverWorkflowCommand)
-  ),
-  'risk-register': lazy(() =>
-    import('./commands/governance.js').then((m) => m.riskRegisterCommand)
-  ),
-  'data-classification': lazy(() =>
-    import('./commands/governance.js').then((m) => m.dataClassificationCommand)
-  ),
-  'credential-boundary': lazy(() =>
-    import('./commands/governance.js').then((m) => m.credentialBoundaryCommand)
-  ),
-  'vendor-risk': lazy(() => import('./commands/governance.js').then((m) => m.vendorRiskCommand)),
-  'ops-ownership': lazy(() =>
-    import('./commands/governance.js').then((m) => m.opsOwnershipCommand)
-  ),
-  'governance-dashboard': lazy(() =>
-    import('./commands/governance.js').then((m) => m.governanceDashboardCommand)
-  ),
-  'incident-feedback': lazy(() =>
-    import('./commands/governance.js').then((m) => m.incidentFeedbackCommand)
-  ),
-  'workstream-ownership': lazy(() =>
-    import('./commands/governance.js').then((m) => m.workstreamOwnershipCommand)
-  ),
-  'ai-evaluation': lazy(() =>
-    import('./commands/governance.js').then((m) => m.aiEvaluationCommand)
-  ),
-
-  // Collaboration/UX cluster (T4.7.2 batch 8)
-  // NOTE: `ai-intake` already wired in the LLM/cost cluster above (batch 6
-  // landed first). The collaboration.ts module's aiIntakeCommand is unused
-  // — same underlying lib so behavior is equivalent.
-  'backlog-sync': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.backlogSyncCommand)
-  ),
-  'bcdr-planning': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.bcdrPlanningCommand)
-  ),
+  'backlog-sync': lazy(() => import('./commands/cleanup.js').then((m) => m.backlogSyncCommand)),
+  'bcdr-planning': lazy(() => import('./commands/cleanup.js').then((m) => m.bcdrPlanningCommand)),
   'branch-workflow': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.branchWorkflowCommand)
+    import('./commands/cleanup.js').then((m) => m.branchWorkflowCommand)
   ),
-  'cab-output': lazy(() => import('./commands/collaboration.js').then((m) => m.cabOutputCommand)),
+  'cab-output': lazy(() => import('./commands/cleanup.js').then((m) => m.cabOutputCommand)),
   'chat-integration': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.chatIntegrationCommand)
+    import('./commands/cleanup.js').then((m) => m.chatIntegrationCommand)
   ),
   'ci-cd-integration': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.ciCdIntegrationCommand)
+    import('./commands/cleanup.js').then((m) => m.ciCdIntegrationCommand)
   ),
-  collaboration: lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.collaborationCommand)
+  collaboration: lazy(() => import('./commands/cleanup.js').then((m) => m.collaborationCommand)),
+  'compliance-packs': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.compliancePacksCommand)
   ),
   'context-onboarding': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.contextOnboardingCommand)
+    import('./commands/cleanup.js').then((m) => m.contextOnboardingCommand)
   ),
-  'data-contracts': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.dataContractsCommand)
+  'credential-boundary': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.credentialBoundaryCommand)
   ),
-  'db-evolution': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.dbEvolutionCommand)
+  'data-classification': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.dataClassificationCommand)
   ),
+  'data-contracts': lazy(() => import('./commands/cleanup.js').then((m) => m.dataContractsCommand)),
+  'db-evolution': lazy(() => import('./commands/cleanup.js').then((m) => m.dbEvolutionCommand)),
   'decision-conflicts': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.decisionConflictsCommand)
+    import('./commands/cleanup.js').then((m) => m.decisionConflictsCommand)
   ),
   'delivery-confidence': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.deliveryConfidenceCommand)
+    import('./commands/cleanup.js').then((m) => m.deliveryConfidenceCommand)
   ),
   'dependency-upgrade': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.dependencyUpgradeCommand)
+    import('./commands/cleanup.js').then((m) => m.dependencyUpgradeCommand)
   ),
-  'design-system': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.designSystemCommand)
+  'design-system': lazy(() => import('./commands/cleanup.js').then((m) => m.designSystemCommand)),
+  'diagram-studio': lazy(() => import('./commands/cleanup.js').then((m) => m.diagramStudioCommand)),
+  'ea-review-packet': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.eaReviewPacketCommand)
   ),
-  'diagram-studio': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.diagramStudioCommand)
-  ),
-  elicitation: lazy(() => import('./commands/collaboration.js').then((m) => m.elicitationCommand)),
+  elicitation: lazy(() => import('./commands/cleanup.js').then((m) => m.elicitationCommand)),
   'estimation-studio': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.estimationStudioCommand)
+    import('./commands/cleanup.js').then((m) => m.estimationStudioCommand)
   ),
+  'evidence-collector': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.evidenceCollectorCommand)
+  ),
+  'governance-dashboard': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.governanceDashboardCommand)
+  ),
+  'guided-handoff': lazy(() => import('./commands/cleanup.js').then((m) => m.guidedHandoffCommand)),
+  'incident-feedback': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.incidentFeedbackCommand)
+  ),
+  'ops-ownership': lazy(() => import('./commands/cleanup.js').then((m) => m.opsOwnershipCommand)),
   'playback-summaries': lazy(() =>
-    import('./commands/collaboration.js').then((m) => m.playbackSummariesCommand)
+    import('./commands/cleanup.js').then((m) => m.playbackSummariesCommand)
+  ),
+  policy: lazy(() => import('./commands/cleanup.js').then((m) => m.policyCommand)),
+  portfolio: lazy(() => import('./commands/cleanup.js').then((m) => m.portfolioCommand)),
+  'raci-matrix': lazy(() => import('./commands/cleanup.js').then((m) => m.raciMatrixCommand)),
+  'repo-graph': lazy(() => import('./commands/cleanup.js').then((m) => m.repoGraphCommand)),
+  'requirements-baseline': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.requirementsBaselineCommand)
+  ),
+  revert: lazy(() => import('./commands/cleanup.js').then((m) => m.revertCommand)),
+  'risk-register': lazy(() => import('./commands/cleanup.js').then((m) => m.riskRegisterCommand)),
+  'role-approval': lazy(() => import('./commands/cleanup.js').then((m) => m.roleApprovalCommand)),
+  'role-views': lazy(() => import('./commands/cleanup.js').then((m) => m.roleViewsCommand)),
+  'root-cause': lazy(() => import('./commands/cleanup.js').then((m) => m.rootCauseCommand)),
+  'runtime-debugger': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.runtimeDebuggerCommand)
+  ),
+  'safe-rename': lazy(() => import('./commands/cleanup.js').then((m) => m.safeRenameCommand)),
+  scan: lazy(() => import('./commands/cleanup.js').then((m) => m.scanCommand)),
+  'semantic-diff': lazy(() => import('./commands/cleanup.js').then((m) => m.semanticDiffCommand)),
+  'sla-slo': lazy(() => import('./commands/cleanup.js').then((m) => m.slaSloCommand)),
+  'spec-comments': lazy(() => import('./commands/cleanup.js').then((m) => m.specCommentsCommand)),
+  'spec-maturity': lazy(() => import('./commands/cleanup.js').then((m) => m.specMaturityCommand)),
+  'sre-integration': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.sreIntegrationCommand)
+  ),
+  'telemetry-feedback': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.telemetryFeedbackCommand)
+  ),
+  'test-generator': lazy(() => import('./commands/cleanup.js').then((m) => m.testGeneratorCommand)),
+  timestamp: lazy(() => import('./commands/cleanup.js').then((m) => m.timestampCommand)),
+  'tool-guardrails': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.toolGuardrailsCommand)
+  ),
+  'transcript-ingestion': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.transcriptIngestionCommand)
+  ),
+  'vendor-risk': lazy(() => import('./commands/cleanup.js').then((m) => m.vendorRiskCommand)),
+  'waiver-workflow': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.waiverWorkflowCommand)
+  ),
+  'web-dashboard': lazy(() => import('./commands/cleanup.js').then((m) => m.webDashboardCommand)),
+  'workshop-mode': lazy(() => import('./commands/cleanup.js').then((m) => m.workshopModeCommand)),
+  'workstream-ownership': lazy(() =>
+    import('./commands/cleanup.js').then((m) => m.workstreamOwnershipCommand)
   ),
 };
 
