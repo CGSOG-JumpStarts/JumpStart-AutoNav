@@ -157,14 +157,41 @@ const subCommands: Record<string, () => Promise<CommandDef>> = {
   update: lazy(() => import('./commands/marketplace.js').then((m) => m.updateCommand)),
   upgrade: lazy(() => import('./commands/marketplace.js').then((m) => m.upgradeCommand)),
 
-  // Runners cluster (T4.7.2 batch 4 — bin/cli.js lines ~972 (verify), ~1166
-  // (test); holodeck/headless/smoke/regression were standalone scripts)
+  // Runners cluster (T4.7.2 batch 4)
   verify: lazy(() => import('./commands/runners.js').then((m) => m.verifyCommand)),
   holodeck: lazy(() => import('./commands/runners.js').then((m) => m.holodeckCommand)),
   headless: lazy(() => import('./commands/runners.js').then((m) => m.headlessCommand)),
   smoke: lazy(() => import('./commands/runners.js').then((m) => m.smokeCommand)),
   regression: lazy(() => import('./commands/runners.js').then((m) => m.regressionCommand)),
   test: lazy(() => import('./commands/runners.js').then((m) => m.testCommand)),
+
+  // Spec-quality cluster (T4.7.2 batch 5)
+  'ambiguity-heatmap': lazy(() =>
+    import('./commands/spec-quality.js').then((m) => m.ambiguityHeatmapCommand)
+  ),
+  complexity: lazy(() => import('./commands/spec-quality.js').then((m) => m.complexityCommand)),
+  'context-chunker': lazy(() =>
+    import('./commands/spec-quality.js').then((m) => m.contextChunkerCommand)
+  ),
+  crossref: lazy(() => import('./commands/spec-quality.js').then((m) => m.crossrefCommand)),
+  'ast-edit': lazy(() => import('./commands/spec-quality.js').then((m) => m.astEditCommand)),
+  dashboard: lazy(() => import('./commands/spec-quality.js').then((m) => m.dashboardCommand)),
+  ceremony: lazy(() => import('./commands/spec-quality.js').then((m) => m.ceremonyCommand)),
+  'refactor-planner': lazy(() =>
+    import('./commands/spec-quality.js').then((m) => m.refactorPlannerCommand)
+  ),
+  'quality-graph': lazy(() =>
+    import('./commands/spec-quality.js').then((m) => m.qualityGraphCommand)
+  ),
+  'bidirectional-trace': lazy(() =>
+    import('./commands/spec-quality.js').then((m) => m.bidirectionalTraceCommand)
+  ),
+  'domain-ontology': lazy(() =>
+    import('./commands/spec-quality.js').then((m) => m.domainOntologyCommand)
+  ),
+  'event-modeling': lazy(() =>
+    import('./commands/spec-quality.js').then((m) => m.eventModelingCommand)
+  ),
 };
 
 // ─────────────────────────────────────────────────────────────────────────
