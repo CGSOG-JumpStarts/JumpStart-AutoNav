@@ -260,6 +260,48 @@ const subCommands: Record<string, () => Promise<CommandDef>> = {
     import('./commands/enterprise.js').then((m) => m.contractFirstCommand)
   ),
   deterministic: lazy(() => import('./commands/enterprise.js').then((m) => m.deterministicCommand)),
+
+  // Governance/risk cluster (T4.7.2 batch 7)
+  adr: lazy(() => import('./commands/governance.js').then((m) => m.adrCommand)),
+  policy: lazy(() => import('./commands/governance.js').then((m) => m.policyCommand)),
+  'role-approval': lazy(() =>
+    import('./commands/governance.js').then((m) => m.roleApprovalCommand)
+  ),
+  'raci-matrix': lazy(() => import('./commands/governance.js').then((m) => m.raciMatrixCommand)),
+  'compliance-packs': lazy(() =>
+    import('./commands/governance.js').then((m) => m.compliancePacksCommand)
+  ),
+  'evidence-collector': lazy(() =>
+    import('./commands/governance.js').then((m) => m.evidenceCollectorCommand)
+  ),
+  'waiver-workflow': lazy(() =>
+    import('./commands/governance.js').then((m) => m.waiverWorkflowCommand)
+  ),
+  'risk-register': lazy(() =>
+    import('./commands/governance.js').then((m) => m.riskRegisterCommand)
+  ),
+  'data-classification': lazy(() =>
+    import('./commands/governance.js').then((m) => m.dataClassificationCommand)
+  ),
+  'credential-boundary': lazy(() =>
+    import('./commands/governance.js').then((m) => m.credentialBoundaryCommand)
+  ),
+  'vendor-risk': lazy(() => import('./commands/governance.js').then((m) => m.vendorRiskCommand)),
+  'ops-ownership': lazy(() =>
+    import('./commands/governance.js').then((m) => m.opsOwnershipCommand)
+  ),
+  'governance-dashboard': lazy(() =>
+    import('./commands/governance.js').then((m) => m.governanceDashboardCommand)
+  ),
+  'incident-feedback': lazy(() =>
+    import('./commands/governance.js').then((m) => m.incidentFeedbackCommand)
+  ),
+  'workstream-ownership': lazy(() =>
+    import('./commands/governance.js').then((m) => m.workstreamOwnershipCommand)
+  ),
+  'ai-evaluation': lazy(() =>
+    import('./commands/governance.js').then((m) => m.aiEvaluationCommand)
+  ),
 };
 
 // ─────────────────────────────────────────────────────────────────────────
